@@ -1,0 +1,301 @@
+version: '3.8'
+
+services:
+  # Frontend App (React/Next.js) - Port: 4200
+  frontend:
+    build: ./frontend
+    ports:
+      - "4200:4200"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+    depends_on:
+      - api-gateway
+    networks:
+      - kindledger-network
+
+  # API Gateway (Spring Cloud Gateway) - Port: 8080
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - BLOCKCHAIN_GW_URL=http://blockchain-gw:9090
+    depends_on:
+      - blockchain-gw
+    networks:
+      - kindledger-network
+
+  # Blockchain Gateway Service (Golang) - Port: 9090
+  blockchain-gw:
+    build: ./blockchain-gateway
+    ports:
+      - "9090:9090"
+    environment:
+      - PORT=9090
+      - MB_PEER_URL=http://mb-peer:8082
+      - CHARITY_PEER_URL=http://charity-peer:8083
+      - ORDERER_URL=http://orderer-1:7050
+      - IPFS_URL=http://ipfs:5001
+      - MONGODB_SHARED_URL=mongodb://admin:password@mongodb-shared:27017/kindledger_shared
+    depends_on:
+      - mongodb-shared
+      - mb-peer
+      - charity-peer
+      - orderer-1
+      - ipfs
+    networks:
+      - kindledger-network
+    restart: unless-stopped
+
+  # MB Bank Peer Node (Golang) - Port: 8082
+  mb-peer:
+    build: ./peer-nodes/mb-peer
+    ports:
+      - "8082:8082"
+    environment:
+      - PEER_ID=mb-peer
+      - PEER_PORT=8082
+      - ORDERER_URL=http://orderer-1:7050
+      - MONGODB_URL=mongodb://mb_admin:mb_password@mongodb-mb:27017/mb_ledger
+      - MONGODB_SHARED_URL=mongodb://admin:password@mongodb-shared:27017/kindledger_shared
+    depends_on:
+      - mongodb-mb
+      - mongodb-shared
+      - orderer-1
+    networks:
+      - kindledger-network
+    restart: unless-stopped
+
+  # Charity Organization Peer Node (Golang) - Port: 8083
+  charity-peer:
+    build: ./peer-nodes/charity-peer
+    ports:
+      - "8083:8083"
+    environment:
+      - PEER_ID=charity-peer
+      - PEER_PORT=8083
+      - ORDERER_URL=http://orderer-1:7050
+      - MONGODB_URL=mongodb://charity_admin:charity_password@mongodb-charity:27017/charity_ledger
+      - MONGODB_SHARED_URL=mongodb://admin:password@mongodb-shared:27017/kindledger_shared
+    depends_on:
+      - mongodb-charity
+      - mongodb-shared
+      - orderer-1
+    networks:
+      - kindledger-network
+    restart: unless-stopped
+
+  # Orderer Cluster (Golang)
+  orderer-1:
+    build: ./orderer
+    ports:
+      - "7050:7050"
+    environment:
+      - ORDERER_ID=orderer-1
+      - ORDERER_PORT=7050
+      - MONGODB_URL=mongodb://orderer_admin:orderer_password@mongodb-orderer:27017/orderer_ledger
+      - MONGODB_SHARED_URL=mongodb://admin:password@mongodb-shared:27017/kindledger_shared
+    depends_on:
+      - mongodb-orderer
+      - mongodb-shared
+    networks:
+      - kindledger-network
+    restart: unless-stopped
+
+  orderer-2:
+    build: ./orderer
+    ports:
+      - "7051:7051"
+    environment:
+      - ORDERER_ID=orderer-2
+      - ORDERER_PORT=7051
+      - MONGODB_URL=mongodb://orderer_admin:orderer_password@mongodb-orderer:27017/orderer_ledger
+      - MONGODB_SHARED_URL=mongodb://admin:password@mongodb-shared:27017/kindledger_shared
+    depends_on:
+      - mongodb-orderer
+      - mongodb-shared
+    networks:
+      - kindledger-network
+    restart: unless-stopped
+
+  orderer-3:
+    build: ./orderer
+    ports:
+      - "7052:7052"
+    environment:
+      - ORDERER_ID=orderer-3
+      - ORDERER_PORT=7052
+      - MONGODB_URL=mongodb://orderer_admin:orderer_password@mongodb-orderer:27017/orderer_ledger
+      - MONGODB_SHARED_URL=mongodb://admin:password@mongodb-shared:27017/kindledger_shared
+    depends_on:
+      - mongodb-orderer
+      - mongodb-shared
+    networks:
+      - kindledger-network
+    restart: unless-stopped
+
+  # MongoDB Shared (Central Database)
+  mongodb-shared:
+    image: mongo:6.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_DATABASE=kindledger_shared
+    volumes:
+      - mongodb_shared_data:/data/db
+      - ./mongodb-init:/docker-entrypoint-initdb.d
+    networks:
+      - kindledger-network
+    restart: unless-stopped
+
+  # MongoDB for MB Bank Peer
+  mongodb-mb:
+    image: mongo:6.0
+    ports:
+      - "27018:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=mb_admin
+      - MONGO_INITDB_ROOT_PASSWORD=mb_password
+      - MONGO_INITDB_DATABASE=mb_ledger
+    volumes:
+      - mongodb_mb_data:/data/db
+    networks:
+      - kindledger-network
+    restart: unless-stopped
+
+  # MongoDB for Charity Peer
+  mongodb-charity:
+    image: mongo:6.0
+    ports:
+      - "27019:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=charity_admin
+      - MONGO_INITDB_ROOT_PASSWORD=charity_password
+      - MONGO_INITDB_DATABASE=charity_ledger
+    volumes:
+      - mongodb_charity_data:/data/db
+    networks:
+      - kindledger-network
+    restart: unless-stopped
+
+  # MongoDB for Orderer
+  mongodb-orderer:
+    image: mongo:6.0
+    ports:
+      - "27020:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=orderer_admin
+      - MONGO_INITDB_ROOT_PASSWORD=orderer_password
+      - MONGO_INITDB_DATABASE=orderer_ledger
+    volumes:
+      - mongodb_orderer_data:/data/db
+    networks:
+      - kindledger-network
+    restart: unless-stopped
+
+  # MongoDB for Gov Observer
+  mongodb-gov:
+    image: mongo:6.0
+    ports:
+      - "27021:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=gov_admin
+      - MONGO_INITDB_ROOT_PASSWORD=gov_password
+      - MONGO_INITDB_DATABASE=gov_ledger
+    volumes:
+      - mongodb_gov_data:/data/db
+    networks:
+      - kindledger-network
+    restart: unless-stopped
+
+  # MongoDB for Core Banking
+  mongodb-banking:
+    image: mongo:6.0
+    ports:
+      - "27022:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=banking_admin
+      - MONGO_INITDB_ROOT_PASSWORD=banking_password
+      - MONGO_INITDB_DATABASE=banking_ledger
+    volumes:
+      - mongodb_banking_data:/data/db
+    networks:
+      - kindledger-network
+    restart: unless-stopped
+
+  # IPFS Storage - Port: 5001
+  ipfs:
+    image: ipfs/go-ipfs:latest
+    ports:
+      - "5001:5001"
+      - "4001:4001"
+    environment:
+      - IPFS_PROFILE=server
+    volumes:
+      - ipfs_data:/data/ipfs
+    networks:
+      - kindledger-network
+
+  # Block Explorer - Port: 8088
+  block-explorer:
+    build: ./block-explorer
+    ports:
+      - "8088:8088"
+    environment:
+      - EXPLORER_PORT=8088
+      - ORDERER_URL=http://orderer-1:7050
+    depends_on:
+      - orderer-1
+    networks:
+      - kindledger-network
+
+  # Gov Observer Node (Golang) - Port: 7070
+  gov-observer:
+    build: ./gov-observer
+    ports:
+      - "7070:7070"
+    environment:
+      - OBSERVER_PORT=7070
+      - ORDERER_URL=http://orderer-1:7050
+      - MONGODB_URL=mongodb://gov_admin:gov_password@mongodb-gov:27017/gov_ledger
+      - MONGODB_SHARED_URL=mongodb://admin:password@mongodb-shared:27017/kindledger_shared
+    depends_on:
+      - mongodb-gov
+      - mongodb-shared
+      - orderer-1
+    networks:
+      - kindledger-network
+    restart: unless-stopped
+
+  # Core Banking System (Golang Mock) - Port: 8089
+  core-banking:
+    build: ./core-banking
+    ports:
+      - "8089:8089"
+    environment:
+      - CORE_BANKING_PORT=8089
+      - MONGODB_URL=mongodb://banking_admin:banking_password@mongodb-banking:27017/banking_ledger
+      - MONGODB_SHARED_URL=mongodb://admin:password@mongodb-shared:27017/kindledger_shared
+    depends_on:
+      - mongodb-banking
+      - mongodb-shared
+    networks:
+      - kindledger-network
+    restart: unless-stopped
+
+volumes:
+  mongodb_shared_data:
+  mongodb_mb_data:
+  mongodb_charity_data:
+  mongodb_orderer_data:
+  mongodb_gov_data:
+  mongodb_banking_data:
+  ipfs_data:
+
+networks:
+  kindledger-network:
+    driver: bridge

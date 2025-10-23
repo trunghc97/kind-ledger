@@ -1,0 +1,29 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: blockchain-gw
+          uri: http://blockchain-gw:9090
+          predicates:
+            - Path=/api/blockchain/**
+        - id: frontend
+          uri: http://frontend:4200
+          predicates:
+            - Path=/**
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
