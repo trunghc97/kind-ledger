@@ -125,6 +125,64 @@ graph TB
 
 **POC**: 5 validators. **Prod**: 10–20 validators, đa ngân hàng & tổ chức.
 
+### 4.3 Kiến trúc chi tiết hệ thống
+
+```mermaid
+graph TB
+  subgraph WEB["Web / Mobile App Layer"]
+    FE["Frontend App<br/>React/Next.js<br/>Port: 4200"]
+  end
+
+  subgraph APIGW["API Gateway Layer"]
+    GATEWAY["API Gateway<br/>Spring Cloud Gateway<br/>Port: 8080"]
+  end
+
+  subgraph BCGW["Blockchain Gateway Layer"]
+    BC_GW["blockchain-gw Service<br/>Spring Boot / Web3J<br/>Port: 9090<br/>→ Ký giao dịch, gom endorsement, gửi Orderer"]
+  end
+
+  subgraph NETWORK["Blockchain Network (IBFT/PoA)"]
+    subgraph MB["Peer Node – MB Bank"]
+      MB_API["Peer API<br/>Port: 8082"]
+      MB_CC["Smart Contract Engine<br/>Chaincode Runtime"]
+      MB_DB[("Ledger DB<br/>MongoDB@27017")]
+    end
+
+    subgraph ORG2["Peer Node – Charity Organization"]
+      CH_API["Peer API<br/>Port: 8083"]
+      CH_CC["Smart Contract Container"]
+      CH_DB[("Ledger DB")]
+    end
+
+    subgraph ORDER["Orderer Cluster"]
+      ORD1["Orderer-1<br/>Port: 7050"]
+      ORD2["Orderer-2<br/>Port: 7051"]
+      ORD3["Orderer-3<br/>Port: 7052"]
+    end
+  end
+
+  subgraph EXT["External & Integration"]
+    CORE["Core Banking System<br/>MB Internal<br/>Port: 8089"]
+    IPFS[("IPFS Storage<br/>Port: 5001")]
+    EXPLR["Block Explorer<br/>Port: 8088"]
+    GOV["Gov Observer Node<br/>Port: 7070"]
+  end
+
+  FE --> GATEWAY
+  GATEWAY --> BC_GW
+  BC_GW --> MB_API
+  MB_API --> MB_CC --> ORD1
+  CH_API --> CH_CC --> ORD2
+  MB_API --> MB_DB
+  CH_API --> CH_DB
+  ORD1 --> ORD2 --> ORD3
+  ORD3 --> MB_API
+  MB_API --> CORE
+  BC_GW --> IPFS
+  EXPLR --> ORD1
+  GOV --> ORD1
+```
+
 ---
 
 ## 5) Mô hình Token & Dòng tiền
