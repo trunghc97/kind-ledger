@@ -54,30 +54,30 @@
 
 ```mermaid
 flowchart TB
-  subgraph Users["👥 Người dùng & Tổ chức"]
-    Donor[👤 Donor\nVí Web/Mobile]
-    Charity[🏢 Tổ chức thiện nguyện\nVí tổ chức]
-    Benef[🧑‍🦳 Người thụ hưởng\nVí/tài khoản]
+  subgraph Users["Người dùng & Tổ chức"]
+    Donor["Donor<br/>Ví Web/Mobile"]
+    Charity["Tổ chức thiện nguyện<br/>Ví tổ chức"]
+    Benef["Người thụ hưởng<br/>Ví/tài khoản"]
   end
 
-  subgraph Banks["🏦 Ngân hàng (Validators)"]
-    MB[MB Node\nMint/Burn]
-    B2[Bank#2 Node]
+  subgraph Banks["Ngân hàng (Validators)"]
+    MB["MB Node<br/>Mint/Burn"]
+    B2["Bank#2 Node"]
   end
 
-  subgraph Chain["🌐 Permissioned EVM (IBFT/PoA) — Public Read"]
-    Token[🪙 cVND Contract]
-    Factory[🏗️ CampaignFactory]
-    Camp[🎯 Campaign SCs]
-    Explorer[🔎 Explorer]
-    Gov[🏛️ Gov/Reg Node]
+  subgraph Chain["Permissioned EVM (IBFT/PoA) - Public Read"]
+    Token["cVND Contract"]
+    Factory["CampaignFactory"]
+    Camp["Campaign SCs"]
+    Explorer["Explorer"]
+    Gov["Gov/Reg Node"]
   end
 
-  subgraph Offchain["🔐 Off‑chain Integrations"]
-    KYC[🔏 KYC/AML DB @ Banks]
-    IPFS[(🧾 IPFS chứng từ)]
-    GW[🔗 Bank Integration Gateway]
-    AML[🛰️ AML Engine]
+  subgraph Offchain["Off-chain Integrations"]
+    KYC["KYC/AML DB @ Banks"]
+    IPFS[("IPFS chứng từ")]
+    GW["Bank Integration Gateway"]
+    AML["AML Engine"]
   end
 
   Donor --> GW --> MB --> Token
@@ -96,22 +96,22 @@ flowchart TB
 ```mermaid
 graph TB
   subgraph Validators["Validator Layer (IBFT/PoA)"]
-    MBV[MB Validator]
-    B2V[Bank#2 Validator]
-    GOVV[Gov/Reg Validator]
-    CHV[Charity Alliance Validator]
-    OPV[Operator Validator]
+    MBV["MB Validator"]
+    B2V["Bank#2 Validator"]
+    GOVV["Gov/Reg Validator"]
+    CHV["Charity Alliance Validator"]
+    OPV["Operator Validator"]
   end
 
   subgraph RPC["RPC/Read Layer"]
-    RP1[Public RPC (rate‑limit)]
-    RP2[Archive RPC]
-    EX[Explorer]
+    RP1["Public RPC (rate-limit)"]
+    RP2["Archive RPC"]
+    EX["Explorer"]
   end
 
   subgraph Apps["Apps & Integrations"]
-    MBGW[MB Integration GW]
-    WebApp[Web/Mobile App]
+    MBGW["MB Integration GW"]
+    WebApp["Web/Mobile App"]
   end
 
   MBV---RP1
@@ -148,9 +148,9 @@ sequenceDiagram
   participant V as Bank Validator
   participant Chain as Blockchain
   U->>GW: Lệnh nạp VND
-  GW->>Core: Ghi có tài khoản (off‑chain)
+  GW->>Core: Ghi có tài khoản (off-chain)
   Core-->>GW: OK + TxRef
-  GW->>V: Yêu cầu Mint (amount, wallet, TxRef) + bank‑sig
+  GW->>V: Yêu cầu Mint (amount, wallet, TxRef) + bank-sig
   V->>Chain: tx Mint (multisig)
   Chain-->>U: cVND về ví (txHash)
 ```
