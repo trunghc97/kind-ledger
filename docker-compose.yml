@@ -71,8 +71,6 @@ services:
     ports:
       - "5001:5001"
       - "8081:8080"
-    volumes:
-      - ipfs_data:/data/ipfs
     environment:
       IPFS_PROFILE: server
     healthcheck:
@@ -173,7 +171,7 @@ services:
       gateway:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4200"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
       interval: 30s
       timeout: 10s
       retries: 3

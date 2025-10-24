@@ -5,7 +5,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { WalletService } from './services/wallet.service';
+import { AutoWalletService, WalletInfo } from './services/auto-wallet.service';
 import { Observable } from 'rxjs';
 
 @Component({
@@ -32,21 +32,21 @@ import { Observable } from 'rxjs';
         <button mat-button routerLink="/donate">Ủng hộ</button>
         <button mat-button routerLink="/buy-item">Mua vật phẩm</button>
         
-        <div *ngIf="walletAddress$ | async as address; else connectButton">
+        <div *ngIf="walletInfo$ | async as walletInfo; else connectButton">
           <button mat-button [matMenuTriggerFor]="walletMenu" class="wallet-connected">
             <mat-icon>account_balance_wallet</mat-icon>
-            {{ address | slice:0:6 }}...{{ address | slice:-4 }}
+            {{ walletInfo.accountNo }}
           </button>
           <mat-menu #walletMenu="matMenu">
-            <button mat-menu-item routerLink="/wallet">Ví của tôi</button>
+            <button mat-menu-item routerLink="/wallet">Quản lý ví</button>
             <button mat-menu-item (click)="disconnectWallet()">Ngắt kết nối</button>
           </mat-menu>
         </div>
         
         <ng-template #connectButton>
-          <button mat-raised-button color="accent" (click)="connectWallet()">
+          <button mat-raised-button color="accent" routerLink="/wallet">
             <mat-icon>account_balance_wallet</mat-icon>
-            Kết nối ví
+            Tạo ví
           </button>
         </ng-template>
       </div>
@@ -64,28 +64,14 @@ import { Observable } from 'rxjs';
   `]
 })
 export class AppComponent implements OnInit {
-  walletAddress$: Observable<string | null>;
+  walletInfo$: Observable<WalletInfo | null>;
 
-  constructor(private walletService: WalletService) {
-    this.walletAddress$ = this.walletService.walletAddress$;
+  constructor(private walletService: AutoWalletService) {
+    this.walletInfo$ = this.walletService.walletInfo$;
   }
 
   ngOnInit() {
-    this.walletService.getWalletAddress().then(address => {
-      if (address) {
-        // Wallet address will be automatically updated through the service
-        // No need to manually call next() on the observable
-      }
-    });
-  }
-
-  async connectWallet() {
-    try {
-      await this.walletService.connectWallet();
-      await this.walletService.switchNetwork();
-    } catch (error) {
-      console.error('Error connecting wallet:', error);
-    }
+    // Không cần làm gì đặc biệt, service sẽ tự động quản lý state
   }
 
   disconnectWallet() {

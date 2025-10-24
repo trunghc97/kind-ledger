@@ -10,7 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router } from '@angular/router';
 import { GatewayService } from '../../services/gateway.service';
-import { WalletService } from '../../services/wallet.service';
+import { AutoWalletService } from '../../services/auto-wallet.service';
 import { Campaign } from '../../models/campaign.model';
 
 @Component({
@@ -61,15 +61,21 @@ import { Campaign } from '../../models/campaign.model';
               <textarea matInput formControlName="message" rows="3" placeholder="Gửi lời nhắn đến chiến dịch..."></textarea>
             </mat-form-field>
 
-            <div class="bg-blue-50 p-4 rounded-lg">
+            <div class="bg-blue-50 p-4 rounded-lg" *ngIf="walletInfo">
               <div class="flex items-center">
                 <mat-icon class="text-blue-500 mr-2">info</mat-icon>
                 <div>
                   <p class="text-sm text-blue-800">
-                    <strong>Ví đã kết nối:</strong> {{ walletAddress | slice:0:6 }}...{{ walletAddress | slice:-4 }}
+                    <strong>Tài khoản:</strong> {{ walletInfo.accountNo }}
                   </p>
                   <p class="text-sm text-blue-600 mt-1">
-                    Số dư cVND: {{ walletBalance | currency:'VND':'symbol':'1.0-0':'vi' }}
+                    <strong>Địa chỉ ví:</strong> {{ walletInfo.walletAddress | slice:0:6 }}...{{ walletInfo.walletAddress | slice:-4 }}
+                  </p>
+                  <p class="text-sm text-blue-600 mt-1">
+                    <strong>Số dư cVND:</strong> {{ walletInfo.balance | currency:'VND':'symbol':'1.0-0':'vi' }}
+                  </p>
+                  <p class="text-sm text-blue-600 mt-1">
+                    <strong>KYC:</strong> {{ walletInfo.kycStatus ? 'Đã xác thực' : 'Chưa xác thực' }}
                   </p>
                 </div>
               </div>
@@ -99,14 +105,13 @@ import { Campaign } from '../../models/campaign.model';
 export class DonateComponent implements OnInit {
   donateForm: FormGroup;
   campaigns: Campaign[] = [];
-  walletAddress: string | null = null;
-  walletBalance: number = 0;
+  walletInfo: any = null;
   isSubmitting = false;
 
   constructor(
     private fb: FormBuilder,
     private gatewayService: GatewayService,
-    private walletService: WalletService,
+    private walletService: AutoWalletService,
     private snackBar: MatSnackBar,
     private route: ActivatedRoute,
     private router: Router
@@ -119,15 +124,18 @@ export class DonateComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.walletAddress = this.walletService.getCurrentWalletAddress();
-    
-    if (!this.walletAddress) {
-      this.router.navigate(['/campaigns']);
-      return;
-    }
-
-    this.loadCampaigns();
-    this.loadWalletBalance();
+    // Subscribe to wallet info
+    this.walletService.walletInfo$.subscribe((walletInfo: any) => {
+      this.walletInfo = walletInfo;
+      
+      if (!walletInfo) {
+        this.snackBar.open('Vui lòng tạo ví trước khi ủng hộ', 'Đóng', { duration: 3000 });
+        this.router.navigate(['/wallet']);
+        return;
+      }
+      
+      this.loadCampaigns();
+    });
     
     // Check for campaign ID in query params
     this.route.queryParams.subscribe(params => {
@@ -150,25 +158,16 @@ export class DonateComponent implements OnInit {
   }
 
   loadWalletBalance() {
-    if (this.walletAddress) {
-      this.gatewayService.getWalletBalance(this.walletAddress).subscribe({
-        next: (balance) => {
-          this.walletBalance = balance.cVndBalance;
-        },
-        error: (error) => {
-          console.error('Error loading wallet balance:', error);
-        }
-      });
-    }
+    // Không cần load balance riêng vì đã có trong walletInfo
   }
 
   onSubmit() {
-    if (this.donateForm.valid && this.walletAddress) {
+    if (this.donateForm.valid && this.walletInfo) {
       this.isSubmitting = true;
       
       const formValue = this.donateForm.value;
       const donateRequest = {
-        walletAddress: this.walletAddress,
+        walletAddress: this.walletInfo.walletAddress,
         campaignId: formValue.campaignId,
         amount: formValue.amount,
         message: formValue.message

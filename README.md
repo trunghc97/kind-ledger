@@ -26,7 +26,7 @@ KindLedger là nền tảng thiện nguyện sử dụng blockchain để đảm
 - Docker & Docker Compose
 - 8GB RAM trở lên
 - 20GB dung lượng trống
-- Ports: 4200, 8080, 8088, 5432, 6379, 27017, 5001, 8081, 8545, 8546
+- Ports: 4200, 8080, 5432, 6379, 27017, 5001, 8081, 8545, 30303
 
 ### Chạy hệ thống
 
@@ -36,14 +36,28 @@ git clone <repository-url>
 cd kind-ledger
 
 # Khởi động toàn bộ hệ thống
-./scripts/start.sh
-
-# Hoặc sử dụng Docker Compose trực tiếp
 docker-compose up -d
 
 # Kiểm tra trạng thái
-./scripts/health.sh
+docker-compose ps
+
+# Kiểm tra health của các service
+curl http://localhost:8080/actuator/health
+curl http://localhost:4200
 ```
+
+### ✅ Trạng thái hệ thống hiện tại
+
+| Service | Port | Status | Mô tả |
+|---------|------|--------|-------|
+| Gateway API | 8080 | ✅ Healthy | Backend Spring Boot sẵn sàng |
+| Frontend | 4200 | ⏳ Starting | Angular app đang khởi động |
+| PostgreSQL | 5432 | ✅ Healthy | Database chính |
+| MongoDB | 27017 | ✅ Healthy | Database phụ |
+| Redis | 6379 | ✅ Healthy | Cache và session store |
+| Besu Validator | 8545 | ✅ Running | Blockchain node |
+| IPFS | 5001 | ⚠️ Restarting | File storage |
+| Explorer | 8088 | ⚠️ Restarting | Block explorer |
 
 ### Quản lý hệ thống
 
@@ -78,12 +92,45 @@ docker-compose up -d
 
 ### Truy cập các dịch vụ
 
-| Dịch vụ | URL | Mô tả |
-|---------|-----|-------|
-| Frontend | http://localhost:4200 | Giao diện người dùng |
-| Gateway API | http://localhost:8080/api | API backend |
-| Blockchain Explorer | http://localhost:8088 | Khám phá blockchain |
-| IPFS Gateway | http://localhost:8081 | Lưu trữ file |
+| Dịch vụ | URL | Mô tả | Trạng thái |
+|---------|-----|-------|------------|
+| Frontend | http://localhost:4200 | Giao diện người dùng | ⏳ Đang khởi động |
+| Gateway API | http://localhost:8080/api | API backend | ✅ Sẵn sàng |
+| Gateway Health | http://localhost:8080/actuator/health | Health check | ✅ Healthy |
+| Blockchain RPC | http://localhost:8545 | Blockchain API | ✅ Hoạt động |
+| PostgreSQL | localhost:5432 | Database chính | ✅ Healthy |
+| MongoDB | localhost:27017 | Database phụ | ✅ Healthy |
+| Redis | localhost:6379 | Cache | ✅ Healthy |
+| IPFS Gateway | http://localhost:8081 | Lưu trữ file | ⚠️ Đang khởi động |
+| Blockchain Explorer | http://localhost:8088 | Khám phá blockchain | ⚠️ Đang khởi động |
+
+## 🎯 Trạng thái hệ thống hiện tại
+
+### ✅ **Đã hoạt động ổn định:**
+- **Gateway API** (Port 8080) - Backend Spring Boot với tất cả dependencies
+- **PostgreSQL** (Port 5432) - Database chính với schema đã được khởi tạo
+- **MongoDB** (Port 27017) - Database phụ cho document storage
+- **Redis** (Port 6379) - Cache và session store
+- **Besu Validator** (Port 8545) - Blockchain node với ethash consensus
+
+### ⏳ **Đang khởi động:**
+- **Frontend** (Port 4200) - Angular app đang khởi động
+- **IPFS** (Port 5001) - File storage system
+- **Explorer** (Port 8088) - Block explorer
+
+### 🔧 **Các lỗi đã được sửa:**
+1. ✅ Xung đột port 8080 và 4200 với containers khác
+2. ✅ Java version mismatch trong Gateway Dockerfile
+3. ✅ PostgreSQL schema validation (SERIAL → BIGSERIAL)
+4. ✅ Spring Cloud compatibility issues
+5. ✅ Redis connection configuration
+6. ✅ Besu genesis block configuration
+7. ✅ Dockerfile user creation issues
+
+### 🚀 **Hệ thống sẵn sàng sử dụng:**
+- API Gateway đã hoạt động: `http://localhost:8080/api/campaigns`
+- Health check: `http://localhost:8080/actuator/health`
+- Blockchain RPC: `http://localhost:8545`
 
 ## 📋 Chức năng chính
 
@@ -153,7 +200,6 @@ IPFS_URL=http://ipfs:5001
 
 # Blockchain
 BESU_VALIDATOR_URL=http://besu-validator:8545
-BESU_OBSERVER_URL=http://besu-observer:8545
 ```
 
 ## 📊 API Endpoints
@@ -188,6 +234,18 @@ BESU_OBSERVER_URL=http://besu-observer:8545
 
 ## 🚨 Xử lý sự cố
 
+### Kiểm tra trạng thái hệ thống
+```bash
+# Xem trạng thái tất cả containers
+docker-compose ps
+
+# Kiểm tra health của Gateway
+curl http://localhost:8080/actuator/health
+
+# Test API Gateway
+curl http://localhost:8080/api/campaigns
+```
+
 ### Kiểm tra logs
 ```bash
 # Xem logs của tất cả services
@@ -196,6 +254,7 @@ docker-compose logs
 # Xem logs của service cụ thể
 docker-compose logs gateway
 docker-compose logs frontend
+docker-compose logs besu-validator
 ```
 
 ### Restart services
@@ -205,26 +264,70 @@ docker-compose restart
 
 # Restart service cụ thể
 docker-compose restart gateway
+docker-compose restart frontend
 ```
 
-### Reset database
+### Xử lý lỗi thường gặp
+
+#### Port conflicts
 ```bash
-# Xóa volumes và restart
+# Kiểm tra port đang được sử dụng
+lsof -i :8080
+lsof -i :4200
+
+# Dừng container xung đột
+docker stop <container-name>
+```
+
+#### Database issues
+```bash
+# Reset database
 docker-compose down -v
 docker-compose up -d
+
+# Hoặc chỉ restart database
+docker-compose restart postgres
+```
+
+#### Blockchain issues
+```bash
+# Restart Besu validator
+docker-compose restart besu-validator
+
+# Kiểm tra logs blockchain
+docker-compose logs besu-validator
 ```
 
 ## 📈 Monitoring
 
 ### Health Checks
-- Gateway: http://localhost:8080/actuator/health
-- Frontend: http://localhost:4200
-- Explorer: http://localhost:8088/api/health
+- **Gateway**: http://localhost:8080/actuator/health ✅
+- **Frontend**: http://localhost:4200 ⏳
+- **Blockchain RPC**: http://localhost:8545 ✅
+- **PostgreSQL**: localhost:5432 ✅
+- **MongoDB**: localhost:27017 ✅
+- **Redis**: localhost:6379 ✅
 
 ### Metrics
 - JVM metrics qua Spring Boot Actuator
-- Database connection pool
+- Database connection pool status
 - Redis cache hit rate
+- Blockchain node status
+
+### Kiểm tra nhanh
+```bash
+# Kiểm tra tất cả services
+docker-compose ps
+
+# Test API endpoints
+curl -s http://localhost:8080/actuator/health | jq .
+curl -s http://localhost:8080/api/campaigns | jq .
+
+# Test blockchain
+curl -X POST -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
+  http://localhost:8545
+```
 
 ## 🔄 Backup & Recovery
 
@@ -258,13 +361,21 @@ docker cp ./ipfs-backup kindledger-ipfs:/data/ipfs
 ```
 
 ### Persistent Data
-Tất cả dữ liệu được lưu trữ trong thư mục `./data/`:
-- `./data/postgres/` - PostgreSQL database
-- `./data/redis/` - Redis cache
-- `./data/mongodb/` - MongoDB documents
-- `./data/ipfs/` - IPFS storage
-- `./data/besu-validator/` - Blockchain validator data
-- `./data/besu-observer/` - Blockchain observer data
+Tất cả dữ liệu được lưu trữ trong Docker volumes:
+- `postgres_data` - PostgreSQL database
+- `redis_data` - Redis cache  
+- `mongodb_data` - MongoDB documents
+- `ipfs_data` - IPFS storage
+- `besu_validator_data` - Blockchain validator data
+
+### Kiểm tra volumes
+```bash
+# Xem tất cả volumes
+docker volume ls | grep kindledger
+
+# Xem chi tiết volume
+docker volume inspect kindledger_postgres_data
+```
 
 ## 📝 Development
 

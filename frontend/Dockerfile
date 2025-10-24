@@ -29,10 +29,10 @@ COPY nginx.conf /etc/nginx/nginx.conf
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:4200 || exit 1
+    CMD curl -f http://localhost:80 || exit 1
 
 # Expose port
-EXPOSE 4200
+EXPOSE 80
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]

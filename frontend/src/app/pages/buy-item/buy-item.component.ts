@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { GatewayService } from '../../services/gateway.service';
-import { WalletService } from '../../services/wallet.service';
+import { AutoWalletService } from '../../services/auto-wallet.service';
 
 interface Item {
   id: number;
@@ -58,15 +58,18 @@ interface Item {
               </span>
             </div>
             
-            <div class="bg-blue-50 p-3 rounded-lg mb-4">
+            <div class="bg-blue-50 p-3 rounded-lg mb-4" *ngIf="walletInfo">
               <div class="flex items-center">
                 <mat-icon class="text-blue-500 mr-2">info</mat-icon>
                 <div>
                   <p class="text-sm text-blue-800">
-                    <strong>Ví đã kết nối:</strong> {{ walletAddress | slice:0:6 }}...{{ walletAddress | slice:-4 }}
+                    <strong>Tài khoản:</strong> {{ walletInfo.accountNo }}
                   </p>
                   <p class="text-sm text-blue-600 mt-1">
-                    Số dư: {{ walletBalance | currency:'VND':'symbol':'1.0-0':'vi' }}
+                    <strong>Ví:</strong> {{ walletInfo.walletAddress | slice:0:6 }}...{{ walletInfo.walletAddress | slice:-4 }}
+                  </p>
+                  <p class="text-sm text-blue-600 mt-1">
+                    <strong>Số dư:</strong> {{ walletInfo.balance | currency:'VND':'symbol':'1.0-0':'vi' }}
                   </p>
                 </div>
               </div>
@@ -111,26 +114,27 @@ interface Item {
 })
 export class BuyItemComponent implements OnInit {
   items: Item[] = [];
-  walletAddress: string | null = null;
-  walletBalance: number = 0;
+  walletInfo: any = null;
   isBuying = false;
 
   constructor(
     private gatewayService: GatewayService,
-    private walletService: WalletService,
+    private walletService: AutoWalletService,
     private snackBar: MatSnackBar
   ) {}
 
   ngOnInit() {
-    this.walletAddress = this.walletService.getCurrentWalletAddress();
-    
-    if (!this.walletAddress) {
-      this.snackBar.open('Vui lòng kết nối ví trước', 'Đóng', { duration: 3000 });
-      return;
-    }
-
-    this.loadItems();
-    this.loadWalletBalance();
+    // Subscribe to wallet info
+    this.walletService.walletInfo$.subscribe((walletInfo: any) => {
+      this.walletInfo = walletInfo;
+      
+      if (!walletInfo) {
+        this.snackBar.open('Vui lòng tạo ví trước khi mua vật phẩm', 'Đóng', { duration: 3000 });
+        return;
+      }
+      
+      this.loadItems();
+    });
   }
 
   loadItems() {
@@ -187,26 +191,13 @@ export class BuyItemComponent implements OnInit {
     ];
   }
 
-  loadWalletBalance() {
-    if (this.walletAddress) {
-      this.gatewayService.getWalletBalance(this.walletAddress).subscribe({
-        next: (balance) => {
-          this.walletBalance = balance.cVndBalance;
-        },
-        error: (error) => {
-          console.error('Error loading wallet balance:', error);
-        }
-      });
-    }
-  }
-
   buyItem(item: Item) {
-    if (!this.walletAddress) {
-      this.snackBar.open('Vui lòng kết nối ví trước', 'Đóng', { duration: 3000 });
+    if (!this.walletInfo) {
+      this.snackBar.open('Vui lòng tạo ví trước', 'Đóng', { duration: 3000 });
       return;
     }
 
-    if (this.walletBalance < item.price) {
+    if (this.walletInfo.balance < item.price) {
       this.snackBar.open('Số dư không đủ để mua vật phẩm này', 'Đóng', { duration: 3000 });
       return;
     }
@@ -217,7 +208,8 @@ export class BuyItemComponent implements OnInit {
     setTimeout(() => {
       this.snackBar.open(`Mua ${item.name} thành công!`, 'Đóng', { duration: 5000 });
       this.isBuying = false;
-      this.loadWalletBalance();
+      // Refresh wallet info
+      this.walletService.getWalletInfo(this.walletInfo.walletAddress);
     }, 2000);
   }
 }

@@ -24,6 +24,6 @@ export const routes: Routes = [
   },
   {
     path: 'wallet',
-    loadComponent: () => import('./pages/wallet/wallet.component').then(m => m.WalletComponent)
+    loadComponent: () => import('./components/wallet-manager/wallet-manager.component').then(m => m.WalletManagerComponent)
   }
 ];

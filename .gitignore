@@ -69,3 +69,5 @@ out/
 
 # Angular
 .angular/
+
+data/*
