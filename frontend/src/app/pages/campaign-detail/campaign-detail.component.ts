@@ -104,7 +104,7 @@ import { Campaign } from '../../models/campaign.model';
           <mat-card-content>
             <div class="bg-green-50 p-4 rounded-lg">
               <div class="flex items-center">
-                <mat-icon class="text-green-500 mr-2">verified</mat-icon>
+                <mat-icon class="text-green-500 mr-2">check_circle</mat-icon>
                 <div>
                   <p class="text-sm text-green-800">
                     <strong>Hash chứng từ:</strong> {{ campaign.evidenceHash }}
@@ -122,7 +122,7 @@ import { Campaign } from '../../models/campaign.model';
 
     <ng-template #loading>
       <div class="text-center py-8">
-        <mat-icon class="text-6xl text-gray-400">hourglass_empty</mat-icon>
+        <mat-icon class="text-6xl text-gray-400">schedule</mat-icon>
         <p class="text-lg text-gray-600 mt-4">Đang tải thông tin chiến dịch...</p>
       </div>
     </ng-template>

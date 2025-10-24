@@ -96,7 +96,7 @@ interface Item {
 
       <ng-template #loading>
         <div class="text-center py-8">
-          <mat-icon class="text-6xl text-gray-400">hourglass_empty</mat-icon>
+          <mat-icon class="text-6xl text-gray-400">schedule</mat-icon>
           <p class="text-lg text-gray-600 mt-4">Đang tải danh sách vật phẩm...</p>
         </div>
       </ng-template>

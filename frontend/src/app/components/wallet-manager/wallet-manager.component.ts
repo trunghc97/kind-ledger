@@ -103,7 +103,7 @@ import { AutoWalletService, WalletInfo } from '../../services/auto-wallet.servic
               <div class="detail-item">
                 <label>Trạng thái KYC:</label>
                 <span class="kyc-status" [class.verified]="walletInfo.kycStatus">
-                  <mat-icon>{{ walletInfo.kycStatus ? 'verified' : 'pending' }}</mat-icon>
+                  <mat-icon>{{ walletInfo.kycStatus ? 'check_circle' : 'schedule' }}</mat-icon>
                   {{ walletInfo.kycStatus ? 'Đã xác thực' : 'Chưa xác thực' }}
                 </span>
               </div>
