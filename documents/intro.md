@@ -1,46 +1,48 @@
-# KindLedger — Hệ thống chuyển tiền thiện nguyện token hóa (Bank‑as‑Node)
+# KindLedger — Hệ thống quyên góp từ thiện minh bạch trên Hyperledger Fabric
 
 ---
 
 ## 0) Tóm tắt điều hành
 
-- **Mục tiêu**: Minh bạch tuyệt đối hành trình tiền từ thiện thông qua token đại diện VND (cVND); mọi giao dịch on‑chain; nạp/rút qua ngân hàng.
-- **Mô hình**: Permissioned, public‑read EVM chain (Ethash). Mỗi ngân hàng = 1 validator node; Chính phủ & Liên minh Tổ chức Thiện nguyện có node giám sát/validator.
-- **Dòng tiền**: Nạp VND → Mint cVND (1:1) → Donate/giải ngân bằng token → Rút VND → Burn cVND.
-- **Minh bạch & riêng tư**: Explorer công khai (ai cũng xem được token đi đâu); danh tính donor pseudonymous; mapping wallet↔account do ngân hàng quản lý off‑chain (KYC/AML).
-- **POC**: ✅ **ĐÃ TRIỂN KHAI THÀNH CÔNG** - Hệ thống hoạt động ổn định với 1 validator (MB), sẵn sàng mở rộng.
+- **Mục tiêu**: Minh bạch tuyệt đối hành trình tiền từ thiện thông qua hệ thống blockchain permissioned; mọi giao dịch on‑chain; quản lý qua các tổ chức được ủy quyền.
+- **Mô hình**: Hyperledger Fabric permissioned network với Raft consensus. 4 organizations: MBBank (anchor), Charity, Supplier, Auditor (read-only).
+- **Dòng tiền**: Tạo chiến dịch → Quyên góp → Theo dõi tiến độ → Giải ngân tự động khi đạt mục tiêu.
+- **Minh bạch & riêng tư**: Explorer công khai (ai cũng xem được giao dịch); danh tính donor có thể ẩn danh; quản lý quyền truy cập qua MSP.
+- **POC**: ✅ **ĐÃ TRIỂN KHAI THÀNH CÔNG** - Hệ thống hoạt động ổn định với 4 peer nodes, sẵn sàng mở rộng.
 
 ---
 
 ## 1) Trạng thái triển khai hiện tại
 
 ### ✅ **Hệ thống đã hoạt động:**
-- **API Gateway** (Port 8080): Spring Boot backend với tất cả dependencies
-- **PostgreSQL** (Port 5432): Database chính với schema đã khởi tạo
-- **MongoDB** (Port 27017): Database phụ cho document storage  
-- **Redis** (Port 6379): Cache và session store
-- **Besu Validator** (Port 8545): Blockchain node với Ethash consensus
-- **IPFS** (Port 5001): File storage cho chứng từ minh bạch
+- **Hyperledger Fabric Network**: 1 Orderer + 4 Peer nodes với Raft consensus
+- **API Gateway** (Port 8080): Spring Boot backend với Fabric SDK integration
+- **Frontend** (Port 4200): Angular application với giao diện đầy đủ
+- **Block Explorer** (Port 3000): Node.js explorer với web interface
+- **Chaincode**: Go-based smart contract (kindledgercc) đã deploy thành công
 
-### ⏳ **Đang khởi động:**
-- **Frontend** (Port 4200): Angular 17 application
-- **Block Explorer** (Port 8088): Blockchain explorer
+### 🏗️ **Kiến trúc mạng:**
+- **Orderer**: orderer.kindledger.com (Port 7050) - Raft consensus
+- **MBBank Peer**: peer0.mb.kindledger.com (Port 7051) - Anchor organization
+- **Charity Peer**: peer0.charity.kindledger.com (Port 8051) - Tổ chức thiện nguyện
+- **Supplier Peer**: peer0.supplier.kindledger.com (Port 9051) - Nhà cung cấp
+- **Auditor Peer**: peer0.auditor.kindledger.com (Port 10051) - Read-only node
 
 ### 🔧 **Các vấn đề đã được giải quyết:**
-1. ✅ Port conflicts với containers khác
-2. ✅ Java version compatibility issues
-3. ✅ Database schema validation (SERIAL → BIGSERIAL)
-4. ✅ Spring Cloud compatibility
-5. ✅ Redis connection configuration
-6. ✅ Besu genesis block configuration
-7. ✅ IPFS container restart issues
+1. ✅ Hyperledger Fabric network configuration
+2. ✅ Chaincode deployment và lifecycle management
+3. ✅ Channel creation và peer joining
+4. ✅ Fabric SDK integration với Spring Boot
+5. ✅ Crypto materials generation và distribution
+6. ✅ Docker Compose orchestration
+7. ✅ Frontend-Backend integration
 
 ### 🌐 **Truy cập hệ thống:**
-- **API Gateway**: http://localhost:8080/api/campaigns
-- **Health Check**: http://localhost:8080/actuator/health
-- **Blockchain RPC**: http://localhost:8545
-- **IPFS API**: http://localhost:5001
-- **Frontend**: http://localhost:4200 (đang khởi động)
+- **Frontend**: http://localhost:4200
+- **API Gateway**: http://localhost:8080/api
+- **Block Explorer**: http://localhost:3000
+- **Fabric Orderer**: localhost:7050
+- **Health Check**: http://localhost:8080/api/health
 
 ---
 
@@ -58,25 +60,27 @@
 
 ## 2) Phạm vi & Vai trò
 
-**Phạm vi POC**: 1–3 campaigns, 2 ngân hàng (MB + 1 bank), 1 tổ chức thiện nguyện lớn, 1 gov/observer, tối thiểu 2.000 users.
+**Phạm vi POC**: 4 organizations, 1 channel (kindchannel), 1 chaincode (kindledgercc), tối thiểu 2.000 users.
 
 **Vai trò**:
-- **Ngân hàng (validators)**: Mint/Burn cVND; tích hợp Core Banking; KYC/AML; vận hành node.
-- **Tổ chức thiện nguyện (validator/observer)**: Tạo campaign, nhận giải ngân, cung cấp chứng từ IPFS.
-- **Chính phủ/cơ quan giám sát (observer/validator)**: Giám sát real‑time, audit.
-- **Người dùng (donor/beneficiary)**: Donate/nhận tiền; có thể ẩn danh ở mức ví.
+- **MBBank (Anchor Organization)**: Quản lý token, tạo chiến dịch, xử lý quyên góp, vận hành peer node.
+- **Charity (Tổ chức thiện nguyện)**: Tạo campaign, nhận giải ngân, cung cấp chứng từ minh bạch.
+- **Supplier (Nhà cung cấp)**: Cung cấp sản phẩm/dịch vụ, tham gia quy trình giải ngân.
+- **Auditor (Read-only)**: Giám sát real‑time, audit, theo dõi giao dịch.
+- **Người dùng (donor/beneficiary)**: Quyên góp/nhận tiền; có thể ẩn danh ở mức giao dịch.
 
 ---
 
-## 3) So sánh Blockchain (token hóa) vs Data Center
+## 3) So sánh Hyperledger Fabric vs Data Center
 
-| Tiêu chí | Blockchain (KindLedger) ✅ **ĐÃ TRIỂN KHAI** | Data Center truyền thống |
+| Tiêu chí | Hyperledger Fabric (KindLedger) ✅ **ĐÃ TRIỂN KHAI** | Data Center truyền thống |
 |----------|-------------------------|---------------------------|
-| Minh bạch | Explorer công khai, theo vết từng token/tx | Báo cáo nội bộ, khó kiểm chứng độc lập |
-| Tin cậy | Bất biến, đa bên xác thực (banks+gov+charities) | Tập trung, 1 bên kiểm soát |
-| Giám sát pháp lý | Gov node realtime, log bất biến | Kiểm toán hậu kiểm, độ trễ cao |
-| Vận hành | Smart contract tự động hóa | Thủ công, đối soát phức tạp |
+| Minh bạch | Explorer công khai, theo vết từng giao dịch | Báo cáo nội bộ, khó kiểm chứng độc lập |
+| Tin cậy | Bất biến, đa bên xác thực (4 organizations) | Tập trung, 1 bên kiểm soát |
+| Giám sát pháp lý | Auditor node realtime, log bất biến | Kiểm toán hậu kiểm, độ trễ cao |
+| Vận hành | Chaincode tự động hóa | Thủ công, đối soát phức tạp |
 | Chi phí dài hạn | Giảm trung gian, chuẩn hóa liên thông | Tăng theo quy mô, tích hợp manh mún |
+| Bảo mật | Permissioned network, MSP-based identity | Tập trung, dễ bị tấn công |
 | **Trạng thái** | ✅ **HOẠT ĐỘNG** - POC thành công | Đang sử dụng |
 
 ---
@@ -88,75 +92,84 @@
 ```mermaid
 flowchart TB
   subgraph Users["Người dùng & Tổ chức"]
-    Donor["Donor<br/>Ví Web/Mobile"]
-    Charity["Tổ chức thiện nguyện<br/>Ví tổ chức"]
-    Benef["Người thụ hưởng<br/>Ví/tài khoản"]
+    Donor["Donor<br/>Web/Mobile App"]
+    Charity["Tổ chức thiện nguyện<br/>Charity Organization"]
+    Benef["Người thụ hưởng<br/>Beneficiary"]
   end
 
-  subgraph Banks["Ngân hàng (Validators)"]
-    MB["MB Node<br/>Mint/Burn"]
-    B2["Bank#2 Node"]
+  subgraph Fabric["Hyperledger Fabric Network"]
+    Orderer["Orderer<br/>Raft Consensus"]
+    MB["MBBank Peer<br/>Anchor Organization"]
+    CharityPeer["Charity Peer<br/>Campaign Management"]
+    SupplierPeer["Supplier Peer<br/>Service Provider"]
+    AuditorPeer["Auditor Peer<br/>Read-only Monitoring"]
   end
 
-  subgraph Chain["Permissioned EVM (IBFT/PoA) - Public Read"]
-    Token["cVND Contract"]
-    Factory["CampaignFactory"]
-    Camp["Campaign SCs"]
-    Explorer["Explorer"]
-    Gov["Gov/Reg Node"]
+  subgraph Chaincode["Smart Contract Layer"]
+    KindLedgerCC["kindledgercc<br/>Campaign Management"]
+    Campaigns["Campaigns<br/>Donation Tracking"]
+    Donations["Donations<br/>Transaction Records"]
   end
 
-  subgraph Offchain["Off-chain Integrations"]
-    KYC["KYC/AML DB @ Banks"]
-    IPFS[("IPFS chứng từ")]
-    GW["Bank Integration Gateway"]
-    AML["AML Engine"]
+  subgraph Apps["Application Layer"]
+    Frontend["Angular Frontend<br/>Port 4200"]
+    Gateway["Spring Boot Gateway<br/>Port 8080"]
+    Explorer["Node.js Explorer<br/>Port 3000"]
   end
 
-  Donor --> GW --> MB --> Token
-  Donor --> Camp
-  Camp --> Charity
-  Charity --> MB
-  MB --> KYC
-  MB --> AML
-  MB --> Gov
-  Token --> Explorer
-  Camp --> IPFS
+  Donor --> Frontend
+  Frontend --> Gateway
+  Gateway --> MB
+  MB --> Orderer
+  CharityPeer --> Orderer
+  SupplierPeer --> Orderer
+  AuditorPeer --> Orderer
+  Orderer --> KindLedgerCC
+  KindLedgerCC --> Campaigns
+  KindLedgerCC --> Donations
+  Explorer --> AuditorPeer
+  Gateway --> Explorer
 ```
 
 ### 4.2 Mạng & Topology
 
 ```mermaid
 graph TB
-  subgraph Validators["Validator Layer (IBFT/PoA)"]
-    MBV["MB Validator"]
-    B2V["Bank#2 Validator"]
-    GOVV["Gov/Reg Validator"]
-    CHV["Charity Alliance Validator"]
-    OPV["Operator Validator"]
+  subgraph OrdererLayer["Orderer Layer (Raft Consensus)"]
+    Orderer["Orderer Node<br/>kindledger.com:7050"]
   end
 
-  subgraph RPC["RPC/Read Layer"]
-    RP1["Public RPC (rate-limit)"]
-    RP2["Archive RPC"]
-    EX["Explorer"]
+  subgraph PeerLayer["Peer Layer (4 Organizations)"]
+    MBP["MBBank Peer<br/>mb.kindledger.com:7051"]
+    CharityP["Charity Peer<br/>charity.kindledger.com:8051"]
+    SupplierP["Supplier Peer<br/>supplier.kindledger.com:9051"]
+    AuditorP["Auditor Peer<br/>auditor.kindledger.com:10051"]
   end
 
-  subgraph Apps["Apps & Integrations"]
-    MBGW["MB Integration GW"]
-    WebApp["Web/Mobile App"]
+  subgraph AppLayer["Application Layer"]
+    Frontend["Angular Frontend<br/>Port 4200"]
+    Gateway["Spring Boot Gateway<br/>Port 8080"]
+    Explorer["Node.js Explorer<br/>Port 3000"]
   end
 
-  MBV---RP1
-  B2V---RP1
-  GOVV---RP2
-  CHV---EX
-  OPV---RP1
-  MBGW---MBV
-  WebApp---RP1
+  subgraph ChaincodeLayer["Chaincode Layer"]
+    KindLedgerCC["kindledgercc<br/>Campaign Management"]
+  end
+
+  Orderer --- MBP
+  Orderer --- CharityP
+  Orderer --- SupplierP
+  Orderer --- AuditorP
+  MBP --- KindLedgerCC
+  CharityP --- KindLedgerCC
+  SupplierP --- KindLedgerCC
+  AuditorP --- KindLedgerCC
+  Gateway --- MBP
+  Frontend --- Gateway
+  Explorer --- AuditorP
 ```
 
-**POC**: ✅ **1 validator đang hoạt động** (MB Bank). **Prod**: 10–20 validators, đa ngân hàng & tổ chức.
+**POC**: ✅ **4 peer nodes đang hoạt động** với 1 orderer. **Prod**: Có thể mở rộng thêm organizations và peers.
 
 ### 4.3 Kiến trúc chi tiết hệ thống (ĐÃ TRIỂN KHAI)
 
@@ -167,179 +180,292 @@ graph TB
   end
 
   subgraph APIGW["API Gateway Layer"]
-    GATEWAY["API Gateway<br/>Spring Boot<br/>Port: 8080 ✅"]
+    GATEWAY["API Gateway<br/>Spring Boot + Fabric SDK<br/>Port: 8080 ✅"]
   end
 
-  subgraph BCGW["Blockchain Gateway Layer"]
-    BC_GW["Gateway Service<br/>Spring Boot / Web3J<br/>Port: 8080<br/>→ Ký giao dịch, tương tác blockchain"]
-  end
-
-  subgraph NETWORK["Blockchain Network (Ethash)"]
-    subgraph MB["Validator Node – MB Bank"]
-      BESU["Besu Validator<br/>Port: 8545 ✅"]
-      RPC["RPC API<br/>Port: 8545"]
+  subgraph FABRIC["Hyperledger Fabric Network"]
+    subgraph ORDERER["Orderer Layer"]
+      ORD["Orderer Node<br/>kindledger.com:7050 ✅"]
+    end
+    
+    subgraph PEERS["Peer Layer"]
+      MBP["MBBank Peer<br/>mb.kindledger.com:7051 ✅"]
+      CHARITYP["Charity Peer<br/>charity.kindledger.com:8051 ✅"]
+      SUPPLIERP["Supplier Peer<br/>supplier.kindledger.com:9051 ✅"]
+      AUDITORP["Auditor Peer<br/>auditor.kindledger.com:10051 ✅"]
+    end
+    
+    subgraph CHAINCODE["Chaincode Layer"]
+      CC["kindledgercc<br/>Go Chaincode ✅"]
     end
   end
 
-  subgraph DATABASES["Database Layer"]
-    POSTGRES[("PostgreSQL<br/>Port: 5432 ✅")]
-    MONGODB[("MongoDB<br/>Port: 27017 ✅")]
-    REDIS[("Redis Cache<br/>Port: 6379 ✅")]
-  end
-
-  subgraph EXT["External & Integration"]
-    IPFS[("IPFS Storage<br/>Port: 5001 ✅")]
-    EXPLR["Block Explorer<br/>Port: 8088 ⏳"]
+  subgraph EXPLORER["Blockchain Explorer"]
+    EXPLR["Node.js Explorer<br/>Port: 3000 ✅"]
   end
 
   FE --> GATEWAY
-  GATEWAY --> BC_GW
-  BC_GW --> BESU
-  BESU --> RPC
-  GATEWAY --> POSTGRES
-  GATEWAY --> MONGODB
-  GATEWAY --> REDIS
-  BC_GW --> IPFS
-  EXPLR --> BESU
+  GATEWAY --> MBP
+  MBP --> ORD
+  CHARITYP --> ORD
+  SUPPLIERP --> ORD
+  AUDITORP --> ORD
+  MBP --> CC
+  CHARITYP --> CC
+  SUPPLIERP --> CC
+  AUDITORP --> CC
+  EXPLR --> AUDITORP
+  GATEWAY --> EXPLR
 ```
 
 ---
 
-## 5) Mô hình Token & Dòng tiền
+## 5) Mô hình Campaign & Dòng tiền
 
-### 5.1 Token cVND
+### 5.1 Campaign Management
 
-- **Tên**: Charity Vietnamese Đồng (cVND), Peg: 1 cVND = 1 VND (dự trữ 100% tại ngân hàng).
-- **Chuẩn**: ERC‑20 + EIP‑2612 (permit), optional EIP‑3009.
-- **Quyền**: MINTER_ROLE (multisig ngân hàng), FREEZER_ROLE (gov+bank), PAUSER_ROLE.
+- **Tên**: Kind-Ledger Campaign System, quản lý chiến dịch quyên góp từ thiện.
+- **Chuẩn**: Hyperledger Fabric Chaincode (Go), MSP-based identity management.
+- **Quyền**: MBBank (anchor), Charity (campaign creator), Supplier (service provider), Auditor (read-only).
 
 ### 5.2 Dòng tiền (sequence)
 
-**Nạp VND → Mint cVND**
+**Tạo Campaign**
 
 ```mermaid
 sequenceDiagram
   autonumber
+  participant U as Charity App
+  participant GW as Spring Gateway
+  participant MB as MBBank Peer
+  participant CC as Chaincode
+  participant Chain as Fabric Network
+  U->>GW: Tạo campaign mới
+  GW->>MB: Submit transaction
+  MB->>CC: CreateCampaign(id, name, description, owner, goal)
+  CC-->>Chain: Campaign created
+  Chain-->>U: Campaign ID + txHash
+```
+
+**Quyên góp**
+
+```mermaid
+sequenceDiagram
   participant U as Donor App
-  participant GW as Bank GW
-  participant Core as Core Banking
-  participant V as Bank Validator
-  participant Chain as Blockchain
-  U->>GW: Lệnh nạp VND
-  GW->>Core: Ghi có tài khoản (off-chain)
-  Core-->>GW: OK + TxRef
-  GW->>V: Yêu cầu Mint (amount, wallet, TxRef) + bank-sig
-  V->>Chain: tx Mint (multisig)
-  Chain-->>U: cVND về ví (txHash)
-```
-
-**Donate → Disburse**
-
-```mermaid
-sequenceDiagram
-  participant U as Donor Wallet
-  participant C as Campaign SC
+  participant GW as Spring Gateway
+  participant MB as MBBank Peer
+  participant CC as Chaincode
   participant E as Explorer
-  U->>C: transfer cVND (campaignId, amount)
-  C-->>C: Update raisedAmount
-  C-->>E: DonatedEvent(indexed)
-  Note right of C: Khi đạt target/điều kiện → disburse()
+  U->>GW: Quyên góp (campaignId, donorId, donorName, amount)
+  GW->>MB: Submit transaction
+  MB->>CC: Donate(campaignId, donorId, donorName, amount)
+  CC-->>CC: Update raised amount
+  CC-->>E: Donation recorded
+  Note right of CC: Khi đạt target → status = COMPLETED
 ```
 
-**Redeem → Burn**
+**Theo dõi Campaign**
 
 ```mermaid
 sequenceDiagram
-  participant R as Recipient Wallet
-  participant GW as Bank GW
-  participant V as Bank Validator
-  participant Chain as Blockchain
-  participant Core as Core Banking
-  R->>GW: Yêu cầu rút VND
-  GW->>V: Burn(amount) + multisig
-  V->>Chain: tx Burn
-  Chain-->>GW: Burned
-  GW->>Core: Chuyển VND vào tài khoản người nhận
+  participant U as User App
+  participant GW as Spring Gateway
+  participant AUD as Auditor Peer
+  participant CC as Chaincode
+  U->>GW: Query campaign details
+  GW->>AUD: Query transaction
+  AUD->>CC: QueryCampaign(campaignId)
+  CC-->>AUD: Campaign data
+  AUD-->>GW: Response
+  GW-->>U: Campaign info + progress
 ```
 
 ---
 
-## 6) Thiết kế Smart Contract (đặc tả & pseudocode)
+## 6) Thiết kế Chaincode (đặc tả & implementation)
 
 ### 6.1 Đặc tả chức năng
 
-- **cVND (ERC‑20 mở rộng)**: mint/burn (multisig), freeze/unfreeze, pause/unpause, hooks tuân thủ AML, events Minted/Burned.
-- **CampaignFactory**: tạo campaign, registry id→address, role admin (owner/multisig alliance).
-- **Campaign**: tham số target, deadline, recipient, allowAnonymous; hàm donate(), disburse(), refund(), setEvidence(ipfsHash); events Donated/Disbursed/Refunded.
-- **ComplianceHooks**: giới hạn ẩn danh (single/daily), denylist/allowlist KYC; hook trước chuyển token.
+- **kindledgercc (Go Chaincode)**: quản lý campaigns, donations, tracking progress, MSP-based access control.
+- **Campaign Management**: tạo campaign, cập nhật trạng thái, theo dõi tiến độ quyên góp.
+- **Donation Tracking**: ghi nhận quyên góp, cập nhật số tiền đã quyên góp, lưu lịch sử donor.
+- **Access Control**: MSP-based permissions, MBBank (anchor), Charity (creator), Supplier (service), Auditor (read-only).
 
-### 6.2 Pseudocode (Solidity‑like)
+### 6.2 Chaincode Implementation (Go)
 
-```solidity
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+```go
+package chaincode
 
-abstract contract Roles { bytes32 constant MINTER_ROLE=..., FREEZER_ROLE=..., PAUSER_ROLE=...; function hasRole(bytes32,address) public view virtual returns(bool); }
-interface IComplianceHooks{ function beforeTokenTransfer(address,address,uint256) external; }
+import (
+    "encoding/json"
+    "fmt"
+    "time"
+    "github.com/hyperledger/fabric-contract-api-go/contractapi"
+)
 
-contract cVND is Roles /* ERC20, ERC20Permit, Pausable, AccessControl */{
-  mapping(address=>bool) public frozen; IComplianceHooks public hooks;
-  function setHooks(address h) external /* onlyRole(PAUSER_ROLE) */{ hooks=IComplianceHooks(h);} 
-  function pause() external /* onlyRole(PAUSER_ROLE) */ {}
-  function unpause() external /* onlyRole(PAUSER_ROLE) */ {}
-  function freeze(address a) external /* onlyRole(FREEZER_ROLE) */ { frozen[a]=true; }
-  function unfreeze(address a) external /* onlyRole(FREEZER_ROLE) */ { frozen[a]=false; }
-  function mint(address to,uint256 amt) external /* onlyRole(MINTER_ROLE) */ { emit Minted(to,amt);} 
-  function burn(address from,uint256 amt) external /* onlyRole(MINTER_ROLE) */ { emit Burned(from,amt);} 
-  function _beforeTokenTransfer(address f,address t,uint256 a) internal { require(!frozen[f]&&!frozen[t],"FROZEN"); if(address(hooks)!=address(0)) hooks.beforeTokenTransfer(f,t,a);} 
-  event Minted(address indexed to,uint256 amt); event Burned(address indexed from,uint256 amt);
+type KindLedgerContract struct {
+    contractapi.Contract
 }
 
-contract ComplianceHooks is IComplianceHooks /* Ownable */{
-  uint256 public anonSingleLimit; uint256 public anonDailyLimit;
-  mapping(address=>uint256) public spentToday; mapping(address=>uint256) public lastSpendDay; mapping(address=>bool) public kyc;
-  constructor(uint256 s,uint256 d){anonSingleLimit=s;anonDailyLimit=d;} function setKyc(address a,bool ok) external /*onlyOwner*/{kyc[a]=ok;}
-  function beforeTokenTransfer(address from,address to,uint256 amt) external { if(kyc[from]||kyc[to]) return; require(amt<=anonSingleLimit,"LIMIT_SINGLE"); uint256 day=block.timestamp/1 days; if(lastSpendDay[from]!=day){lastSpendDay[from]=day;spentToday[from]=0;} require(spentToday[from]+amt<=anonDailyLimit,"LIMIT_DAILY"); spentToday[from]+=amt; }
+type Campaign struct {
+    ID          string    `json:"id"`
+    Name        string    `json:"name"`
+    Description string    `json:"description"`
+    Owner       string    `json:"owner"`
+    Goal        float64   `json:"goal"`
+    Raised      float64   `json:"raised"`
+    Status      string    `json:"status"`
+    CreatedAt   time.Time `json:"createdAt"`
+    UpdatedAt   time.Time `json:"updatedAt"`
+    Donors      []Donor   `json:"donors"`
 }
 
-contract CampaignFactory /* Ownable */{ mapping(bytes32=>address) public registry; event CampaignCreated(address c,bytes32 id,address r);
-  function create(bytes32 id,address token,address recipient,uint256 target,uint256 deadline,bool allowAnon) external /*onlyOwner*/ returns(address c){ require(registry[id]==address(0),"DUP_ID"); c=address(new Campaign(token,recipient,target,deadline,allowAnon)); registry[id]=c; emit CampaignCreated(c,id,recipient);} }
+type Donor struct {
+    ID        string    `json:"id"`
+    Name      string    `json:"name"`
+    Amount    float64   `json:"amount"`
+    DonatedAt time.Time `json:"donatedAt"`
+}
 
-contract Campaign /* ReentrancyGuard */{
-  enum Status{Active,Success,Expired,Refunding,Closed}
-  address public immutable TOKEN; address public recipient; uint256 public target; uint256 public deadline; bool public allowAnonymous; uint256 public raised; Status public status; bytes32 public evidenceHash;
-  event Donated(address indexed from,uint256 amt); event Disbursed(address indexed to,uint256 amt); event Refunded(address indexed to,uint256 amt);
-  constructor(address t,address r,uint256 tg,uint256 dl,bool an){TOKEN=t;recipient=r;target=tg;deadline=dl;allowAnonymous=an;status=Status.Active;}
-  function donate(uint256 amt) external { require(status==Status.Active && block.timestamp<=deadline, "NOT_ACTIVE"); /* IERC20(TOKEN).transferFrom(msg.sender,address(this),amt); */ raised+=amt; emit Donated(msg.sender,amt); if(raised>=target){ _disburse(); }}
-  function _disburse() internal { status=Status.Success; uint256 amt=raised; raised=0; /* IERC20(TOKEN).transfer(recipient,amt); */ emit Disbursed(recipient,amt); }
-  function setEvidence(bytes32 ipfs) external /* onlyRecipient */ { evidenceHash=ipfs; }
-  function refund(address to,uint256 amt) external /* policy */ { require(status==Status.Expired||status==Status.Refunding,"NO_REFUND"); /* IERC20(TOKEN).transfer(to,amt); */ emit Refunded(to,amt);} }
+// CreateCampaign - Tạo campaign mới
+func (k *KindLedgerContract) CreateCampaign(ctx contractapi.TransactionContextInterface, 
+    id, name, description, owner string, goal float64) error {
+    exists, err := k.CampaignExists(ctx, id)
+    if err != nil {
+        return err
+    }
+    if exists {
+        return fmt.Errorf("campaign %s already exists", id)
+    }
 
+    campaign := Campaign{
+        ID:          id,
+        Name:        name,
+        Description: description,
+        Owner:       owner,
+        Goal:        goal,
+        Raised:      0,
+        Status:      "OPEN",
+        CreatedAt:   time.Now(),
+        UpdatedAt:   time.Now(),
+        Donors:      []Donor{},
+    }
+
+    campaignJSON, err := json.Marshal(campaign)
+    if err != nil {
+        return err
+    }
+
+    return ctx.GetStub().PutState(id, campaignJSON)
+}
+
+// Donate - Xử lý quyên góp
+func (k *KindLedgerContract) Donate(ctx contractapi.TransactionContextInterface, 
+    campaignID, donorID, donorName string, amount float64) error {
+    campaign, err := k.QueryCampaign(ctx, campaignID)
+    if err != nil {
+        return err
+    }
+
+    if campaign.Status != "OPEN" {
+        return fmt.Errorf("campaign %s is not open for donations", campaignID)
+    }
+
+    campaign.Raised += amount
+    campaign.UpdatedAt = time.Now()
+
+    donor := Donor{
+        ID:        donorID,
+        Name:      donorName,
+        Amount:    amount,
+        DonatedAt: time.Now(),
+    }
+    campaign.Donors = append(campaign.Donors, donor)
+
+    if campaign.Raised >= campaign.Goal {
+        campaign.Status = "COMPLETED"
+    }
+
+    campaignJSON, err := json.Marshal(campaign)
+    if err != nil {
+        return err
+    }
+
+    return ctx.GetStub().PutState(campaignID, campaignJSON)
+}
+
+// QueryCampaign - Lấy thông tin campaign
+func (k *KindLedgerContract) QueryCampaign(ctx contractapi.TransactionContextInterface, 
+    id string) (*Campaign, error) {
+    campaignJSON, err := ctx.GetStub().GetState(id)
+    if err != nil {
+        return nil, fmt.Errorf("failed to read campaign %s: %v", id, err)
+    }
+    if campaignJSON == nil {
+        return nil, fmt.Errorf("campaign %s does not exist", id)
+    }
+
+    var campaign Campaign
+    err = json.Unmarshal(campaignJSON, &campaign)
+    if err != nil {
+        return nil, err
+    }
+
+    return &campaign, nil
+}
+
+// QueryAllCampaigns - Lấy tất cả campaigns
+func (k *KindLedgerContract) QueryAllCampaigns(ctx contractapi.TransactionContextInterface) ([]*Campaign, error) {
+    resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
+    if err != nil {
+        return nil, err
+    }
+    defer resultsIterator.Close()
+
+    var campaigns []*Campaign
+    for resultsIterator.HasNext() {
+        queryResponse, err := resultsIterator.Next()
+        if err != nil {
+            return nil, err
+        }
+
+        var campaign Campaign
+        err = json.Unmarshal(queryResponse.Value, &campaign)
+        if err != nil {
+            return nil, err
+        }
+        campaigns = append(campaigns, &campaign)
+    }
+
+    return campaigns, nil
+}
 ```
 
-**Audit checklist**: OpenZeppelin ACL, SafeMath (^0.8), reentrancy, event indexation, pausability, multisig (Gnosis Safe) cho MINTER_ROLE & admin; test: Foundry/Hardhat + Slither + Echidna.
+**Security checklist**: MSP-based access control, input validation, error handling, state consistency, audit trail, transaction isolation.
 
 ---
 
-## 7) Tầng tích hợp & API (Bank GW)
+## 7) Tầng tích hợp & API (Spring Gateway)
 
 ### 7.1 Kiến trúc Integration
 
-- **Bank GW (Spring Boot)**:
-- **REST/gRPC**: /mint, /burn, /redeem, /kyc/{wallet}, /evidence.
-- **Ký giao dịch on‑chain** qua HSM/KMS; rate‑limit; retry idempotent.
-- **Outbox → Kafka**: phát event Minted/Burned/Disbursed cho DWH/BI.
-- **Core Banking**: kiểm tra số dư/ghi có/ghi nợ; reconciliation theo TxRef.
-- **AML Engine**: rule ẩn danh, sanctions screening; kết quả → ComplianceHooks via admin tx.
+- **Spring Boot Gateway**:
+- **REST APIs**: /api/campaigns, /api/donate, /api/stats, /api/health.
+- **Fabric SDK Integration**: kết nối với Hyperledger Fabric network qua SDK.
+- **MSP-based Authentication**: xác thực qua Membership Service Provider.
+- **Transaction Management**: submit và query transactions trên Fabric network.
+- **Error Handling**: retry mechanism, transaction rollback, logging.
 
 ### 7.2 API mẫu
 
 ```
-POST /mint { amount, wallet, txRef } -> 202 Accepted (mintTxHash)
-POST /burn { amount, wallet, reason } -> 202 Accepted (burnTxHash)
-POST /redeem { amount, wallet, bankAccount } -> 202 Accepted (redeemId)
-GET  /kyc/{wallet} -> { status: KYCED|ANON, limits: {...} }
-POST /evidence { campaignId, ipfsHash } -> 200 OK
+POST /api/campaigns { id, name, description, owner, goal } -> 200 OK (campaign)
+POST /api/donate { campaignId, donorId, donorName, amount } -> 200 OK (updated campaign)
+GET  /api/campaigns/{id} -> 200 OK (campaign details)
+GET  /api/campaigns -> 200 OK (all campaigns)
+GET  /api/stats/total -> 200 OK (total donations)
+POST /api/init -> 200 OK (initialize ledger)
+GET  /api/health -> 200 OK (service status)
 ```
 
 ---
@@ -348,36 +474,36 @@ POST /evidence { campaignId, ipfsHash } -> 200 OK
 
 ### 8.1 Bảo mật
 
-- **Khóa/Chứng thư**: Validator & multisig ký qua HSM/KMS; người dùng hỗ trợ MPC/hardware wallet.
-- **Kênh**: TLS/mTLS giữa nodes & GW; RPC public chỉ read‑only + rate‑limit.
-- **Quyền**: RBAC, least‑privilege; on‑chain roles tách bạch (minter/freezer/pauser).
-- **Dữ liệu**: On‑chain không chứa PII; IPFS lưu chứng từ → chỉ public hash; KYC encrypt‑at‑rest.
+- **Khóa/Chứng thư**: MSP-based identity management; crypto materials được tạo và phân phối an toàn.
+- **Kênh**: TLS giữa tất cả nodes & gateway; Fabric network permissioned với access control.
+- **Quyền**: MSP-based permissions, least‑privilege; roles tách bạch theo organization.
+- **Dữ liệu**: On‑chain chỉ chứa campaign data; PII được bảo vệ qua MSP identity.
 
 ### 8.2 Pháp lý & tuân thủ
 
-- **cVND** là đại diện số của VND trong hệ khép kín; mint/burn gắn với nạp/rút qua ngân hàng.
-- **KYC/AML** tại ngân hàng; ẩn danh chỉ ở mức ví và theo ngưỡng; redeem bắt buộc KYC.
-- **Gov node** giám sát realtime; export báo cáo theo chuẩn kiểm toán.
-- **Đề xuất triển khai** trong sandbox Fintech/CSR, có MoU 3 bên (Bank–Charity–Gov).
+- **Kind-Ledger** là hệ thống quản lý chiến dịch từ thiện minh bạch trên blockchain permissioned.
+- **MSP Identity**: quản lý danh tính và quyền truy cập qua Membership Service Provider.
+- **Auditor Node** giám sát realtime; export báo cáo theo chuẩn kiểm toán.
+- **Đề xuất triển khai** trong sandbox Fintech/CSR, có MoU 4 bên (MBBank–Charity–Supplier–Auditor).
 
 ---
 
 ## 9) Vận hành (SRE) & Quan trắc
 
-- **K8s** on‑prem/hybrid; mỗi validator 2–4 vCPU, 4–8GiB RAM, SSD 100–200GiB.
-- **Observability**: Prometheus/Grafana; logs Loki/ELK; on‑chain events → Kafka → DWH/BI.
-- **SLA**: finality < 5s; uptime validators ≥ 99.9%; RPO=15m, RTO=30m.
-- **Backup**: Snapshot state; IPFS pinning đa nút; DR site (cross‑AZ/DC).
-- **Game‑day**: Diễn tập freeze/unfreeze, validator failover, fork test, snapshot restore.
+- **Docker Compose** orchestration; mỗi peer 2–4 vCPU, 4–8GiB RAM, SSD 100–200GiB.
+- **Observability**: Docker logs; Fabric metrics; chaincode events → monitoring dashboard.
+- **SLA**: transaction finality < 5s; uptime peers ≥ 99.9%; RPO=15m, RTO=30m.
+- **Backup**: Peer state backup; crypto materials backup; DR site (cross‑AZ/DC).
+- **Game‑day**: Diễn tập peer failover, chaincode upgrade, network partition test.
 
 ---
 
 ## 10) Hiệu năng & Mở rộng
 
-- **TPS mục tiêu**: 100–300 tx/s (PoA/IBFT đủ cho use‑case).
+- **TPS mục tiêu**: 100–300 tx/s (Raft consensus đủ cho use‑case).
 - **Độ trễ**: 2–5s/finality.
-- **Phí**: ~0 (sidechain); có thể đặt gas‑sponsor cho donate.
-- **Mở rộng**: thêm validators; shard theo domain (region/campaign class) nếu cần.
+- **Phí**: ~0 (permissioned network); không có gas fees.
+- **Mở rộng**: thêm organizations; thêm peers; shard theo domain (region/campaign class) nếu cần.
 
 ---
 
@@ -385,13 +511,12 @@ POST /evidence { campaignId, ipfsHash } -> 200 OK
 
 | Rủi ro | Ảnh hưởng | Xác suất | Biện pháp |
 |--------|-----------|----------|-----------|
-| Bug smart contract | Cao | Thấp‑TB | Audit độc lập, timelock, canary, bug bounty |
-| Lạm dụng ẩn danh (AML) | Cao | TB | Thresholds, ComplianceHooks, freeze (multisig gov+bank), off‑chain scoring |
-| Mất peg dự trữ | Cao | Thấp | Báo cáo dự trữ hằng ngày, audit định kỳ, alert tự động |
-| Validator down/fork | TB | Thấp | ≥5 validators, auto‑failover, quorum IBFT, backup/fork‑choice policy |
-| Lộ KYC off‑chain | TB | Thấp‑TB | Encrypt‑at‑rest, RBAC, audit trail, DLP |
-| Pháp lý chưa rõ | TB | TB | Sandbox Fintech, MoU 3 bên, phạm vi khép kín |
-| Chi phí ban đầu | Thấp‑TB | TB | POC nhỏ, tái dùng hạ tầng MB, chuẩn hoá module |
+| Bug chaincode | Cao | Thấp‑TB | Code review, testing, chaincode upgrade mechanism |
+| Lạm dụng quyền truy cập | Cao | TB | MSP-based access control, role separation, audit logs |
+| Peer node down/fork | TB | Thấp | ≥4 peers, auto‑failover, Raft consensus, backup/restore |
+| Lộ crypto materials | TB | Thấp‑TB | Secure key management, crypto materials backup, rotation |
+| Pháp lý chưa rõ | TB | TB | Sandbox Fintech, MoU 4 bên, phạm vi permissioned |
+| Chi phí ban đầu | Thấp‑TB | TB | POC nhỏ, tái dùng hạ tầng, chuẩn hoá module |
 
 ---
 
@@ -399,184 +524,158 @@ POST /evidence { campaignId, ipfsHash } -> 200 OK
 
 | Giai đoạn | Thời gian | Deliverables | Trạng thái |
 |-----------|-----------|--------------|------------|
-| POC | ~3 tháng | 1 validator; cVND+Campaign SC; Explorer; IPFS; MB sandbox mint/burn; dashboard CSR | ✅ **HOÀN THÀNH** |
-| Pilot | +6 tháng | 5–7 validators; AML hooks; public explorer; BI reports; quy trình pháp lý | 🔄 **ĐANG CHUẨN BỊ** |
-| Production | +12 tháng | 15–20 validators; DR; audit độc lập; API mở cộng đồng | 📋 **KẾ HOẠCH** |
+| POC | ~3 tháng | 4 peer nodes; kindledgercc chaincode; Explorer; Spring Gateway; Angular Frontend | ✅ **HOÀN THÀNH** |
+| Pilot | +6 tháng | 8–10 peer nodes; advanced chaincode; public explorer; BI reports; quy trình pháp lý | 🔄 **ĐANG CHUẨN BỊ** |
+| Production | +12 tháng | 20+ peer nodes; DR; audit độc lập; API mở cộng đồng | 📋 **KẾ HOẠCH** |
 
 ### ✅ **POC - ĐÃ HOÀN THÀNH:**
-- **Blockchain**: Besu validator với Ethash consensus hoạt động ổn định
-- **Backend**: Spring Boot Gateway với PostgreSQL, MongoDB, Redis
-- **Frontend**: Angular 17 app đang khởi động
-- **Storage**: IPFS cho chứng từ minh bạch
-- **API**: RESTful APIs cho campaigns, donations, wallet management
-- **Database**: Schema đã được khởi tạo với dữ liệu mẫu
+- **Blockchain**: Hyperledger Fabric network với 4 peer nodes hoạt động ổn định
+- **Backend**: Spring Boot Gateway với Fabric SDK integration
+- **Frontend**: Angular application với giao diện đầy đủ
+- **Explorer**: Node.js blockchain explorer với web interface
+- **Chaincode**: Go-based smart contract (kindledgercc) đã deploy thành công
+- **API**: RESTful APIs cho campaigns, donations, blockchain queries
 
 ---
 
 ## 13) Thông số kỹ thuật (NFR)
 
-- **Bảo mật**: ISO 27001 control mapping; CIS Benchmarks cho K8s; secrets rotation 90 ngày.
-- **Tính sẵn sàng**: Multi‑AZ/DC validators; PDB, HPA.
-- **Khả năng kiểm toán**: Events đầy đủ, index theo campaignId, txRef, wallet.
-- **Khả năng phục hồi**: Snapshot mỗi 6h; test restore hàng tuần.
+- **Bảo mật**: MSP-based identity management; crypto materials rotation 90 ngày.
+- **Tính sẵn sàng**: Multi‑peer redundancy; Docker Compose orchestration.
+- **Khả năng kiểm toán**: Chaincode events đầy đủ, index theo campaignId, donorId, transaction.
+- **Khả năng phục hồi**: Peer state backup mỗi 6h; test restore hàng tuần.
 
 ---
 
-## 14) Phụ lục A — Smart Contract Pseudocode
+## 14) Phụ lục A — Chaincode Implementation
 
-*(Gần với Solidity 0.8.x; dùng OpenZeppelin khi hiện thực; xem mã trong phần trước — giữ nguyên để audit & dev).*
+*(Go-based chaincode sử dụng Hyperledger Fabric Contract API; xem mã trong phần trước — giữ nguyên để audit & dev).*
 
-Xem khối "Thiết kế Smart Contract (đặc tả & pseudocode)".
+Xem khối "Thiết kế Chaincode (đặc tả & implementation)".
 
 ---
 
-## 15) Phụ lục B — Helm Chart khởi tạo Validator (Besu/IBFT)
+## 15) Phụ lục B — Docker Compose Configuration
 
 ### Cấu trúc thư mục
 
 ```
-helm/
-  kindledger-besu/
-    Chart.yaml
-    values.yaml
-    templates/
-      configmap-genesis.yaml
-      secret-keys.yaml
-      statefulset.yaml
-      service.yaml
-      pvc.yaml
+kind-ledger/
+├── docker-compose.yml
+├── blockchain/
+│   ├── config/
+│   │   ├── crypto-config.yaml
+│   │   ├── configtx.yaml
+│   │   └── core.yaml
+│   ├── chaincode/
+│   │   └── kindledgercc/
+│   └── scripts/
+├── gateway/
+├── frontend/
+└── explorer/
 ```
 
-### Chart.yaml
+### docker-compose.yml (tối giản)
 
 ```yaml
-apiVersion: v2
-name: kindledger-besu
-version: 0.1.0
-description: Besu IBFT validator for KindLedger
-appVersion: "23.10"
+version: '3.8'
+
+services:
+  # Hyperledger Fabric Orderer
+  orderer:
+    image: hyperledger/fabric-orderer:2.5
+    container_name: orderer
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/orderer.genesis.block
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: orderer
+    volumes:
+      - ./blockchain/crypto-config/ordererOrganizations/kindledger.com/orderers/orderer.kindledger.com/msp:/var/hyperledger/orderer/msp
+      - ./blockchain/crypto-config/ordererOrganizations/kindledger.com/orderers/orderer.kindledger.com/tls/:/var/hyperledger/orderer/tls
+      - ./blockchain/channel-artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+    ports:
+      - "7050:7050"
+
+  # MBBank Peer
+  peer0.mb:
+    image: hyperledger/fabric-peer:2.5
+    container_name: peer0.mb
+    environment:
+      - CORE_PEER_ID=peer0.mb.kindledger.com
+      - CORE_PEER_ADDRESS=peer0.mb.kindledger.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.mb.kindledger.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.mb.kindledger.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.mb.kindledger.com:7051
+      - CORE_PEER_LOCALMSPID=MBBankMSP
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/msp:/etc/hyperledger/fabric/msp
+      - ./blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls:/etc/hyperledger/fabric/tls
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    ports:
+      - "7051:7051"
+
+  # Spring Boot Gateway
+  kindledger-gateway:
+    build: ./gateway
+    container_name: kindledger-gateway
+    environment:
+      - FABRIC_NETWORK_CONFIG_PATH=/app/blockchain/config/connection-profile.yaml
+      - FABRIC_CHANNEL_NAME=kindchannel
+      - FABRIC_CHAINCODE_NAME=kindledgercc
+    ports:
+      - "8080:8080"
+    depends_on:
+      - peer0.mb
+
+  # Angular Frontend
+  kindledger-frontend:
+    build: ./frontend
+    container_name: kindledger-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - kindledger-gateway
+
+  # Node.js Explorer
+  kindledger-explorer:
+    build: ./explorer
+    container_name: kindledger-explorer
+    environment:
+      - FABRIC_NETWORK_CONFIG_PATH=/app/blockchain/config/connection-profile.yaml
+      - FABRIC_CHANNEL_NAME=kindchannel
+    ports:
+      - "3000:3000"
+    depends_on:
+      - peer0.mb
+
+networks:
+  kindledger:
+    driver: bridge
 ```
 
-### values.yaml (tối giản)
-
-```yaml
-image: { repository: hyperledger/besu, tag: 23.10, pullPolicy: IfNotPresent }
-replicaCount: 1
-resources:
-  requests: { cpu: "500m", memory: "1Gi" }
-  limits:   { cpu: "2",    memory: "4Gi" }
-persistence: { enabled: true, size: 100Gi, storageClass: fast-ssd }
-network:
-  chainId: 13371
-  bootnodes: []
-  validators: ["0x<validator1_pubkey>"]
-node:
-  name: mb-validator-1
-  rpc: { enabled: true, port: 8545, cors: ["*"], methods: ["ETH","NET","WEB3"] }
-  ws: { enabled: false }
-  p2p: { port: 30303 }
-  keys: { validatorKey: "", nodePrivateKey: "" }
-```
-
-### configmap-genesis.yaml
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ include "kindledger-besu.fullname" . }}-genesis
-  labels: { app.kubernetes.io/name: kindledger-besu }
-data:
-  genesis.json: |
-    { "config": { "chainId": {{ .Values.network.chainId }}, "ibft2": { "blockperiodseconds": 2, "epochlength": 30000, "requesttimeoutseconds": 4, "validators": {{ toJson .Values.network.validators }} } }, "alloc": {}, "nonce": "0x0", "timestamp": "0x58ee40ba", "gasLimit": "0x1fffffffffffff" }
-```
-
-### secret-keys.yaml
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata: { name: {{ include "kindledger-besu.fullname" . }}-keys }
-type: Opaque
-data:
-  validator.key: {{ .Values.keys.validatorKey | b64enc | quote }}
-  node.key: {{ .Values.keys.nodePrivateKey | b64enc | quote }}
-```
-
-### statefulset.yaml
-
-```yaml
-apiVersion: apps/v1
-kind: StatefulSet
-metadata: { name: {{ include "kindledger-besu.fullname" . }} }
-spec:
-  serviceName: {{ include "kindledger-besu.fullname" . }}
-  replicas: {{ .Values.replicaCount }}
-  selector: { matchLabels: { app.kubernetes.io/name: kindledger-besu } }
-  template:
-    metadata: { labels: { app.kubernetes.io/name: kindledger-besu } }
-    spec:
-      containers:
-        - name: besu
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          args:
-            - "--data-path=/data"
-            - "--genesis-file=/config/genesis.json"
-            - "--node-private-key-file=/keys/node.key"
-            - "--rpc-http-enabled={{ .Values.node.rpc.enabled }}"
-            - "--rpc-http-port={{ .Values.node.rpc.port }}"
-            - "--host-allowlist=*"
-            - "--rpc-http-api={{ join "," .Values.node.rpc.methods }}"
-            - "--p2p-port={{ .Values.node.p2p.port }}"
-            - "--sync-mode=FULL"
-          ports:
-            - { name: rpc, containerPort: {{ .Values.node.rpc.port }} }
-            - { name: p2p, containerPort: {{ .Values.node.p2p.port }} }
-          volumeMounts:
-            - { name: datadir, mountPath: /data }
-            - { name: genesis, mountPath: /config }
-            - { name: keys, mountPath: /keys, readOnly: true }
-          resources:
-{{ toYaml .Values.resources | indent 12 }}
-      volumes:
-        - { name: genesis, configMap: { name: {{ include "kindledger-besu.fullname" . }}-genesis } }
-        - { name: keys, secret: { secretName: {{ include "kindledger-besu.fullname" . }}-keys } }
-  volumeClaimTemplates:
-    - metadata: { name: datadir }
-      spec:
-        accessModes: [ "ReadWriteOnce" ]
-        storageClassName: {{ .Values.persistence.storageClass }}
-        resources: { requests: { storage: {{ .Values.persistence.size }} } }
-```
-
-### service.yaml
-
-```yaml
-apiVersion: v1
-kind: Service
-metadata: { name: {{ include "kindledger-besu.fullname" . }} }
-spec:
-  type: ClusterIP
-  selector: { app.kubernetes.io/name: kindledger-besu }
-  ports:
-    - { name: rpc, port: {{ .Values.node.rpc.port }}, targetPort: rpc }
-    - { name: p2p, port: {{ .Values.node.p2p.port }}, targetPort: p2p }
-```
-
-**Bảo mật**: RPC không công khai Internet; mTLS/ingress private; dùng HSM/KMS cho khóa validator (Secret chỉ POC); NetworkPolicy deny‑all + allowlist p2p/RPC; PodSecurity + RBAC.
+**Bảo mật**: Crypto materials được tạo và phân phối an toàn; MSP-based identity management; TLS giữa tất cả nodes; Docker network isolation.
 
 ---
 
 ## 16) Kết luận
 
-Mô hình token hóa với ngân hàng làm validator mang lại chuẩn minh bạch mới cho thiện nguyện: ai cũng xem được, không thể sửa, giải ngân tự động, tuân thủ pháp lý nhờ KYC/AML tại ngân hàng và gov‑node giám sát. 
+Mô hình Hyperledger Fabric permissioned network mang lại chuẩn minh bạch mới cho thiện nguyện: ai cũng xem được, không thể sửa, giải ngân tự động, tuân thủ pháp lý nhờ MSP-based identity management và auditor node giám sát. 
 
 ### 🎉 **POC ĐÃ THÀNH CÔNG:**
-- ✅ **Hệ thống hoạt động ổn định** với 1 validator (MB Bank)
+- ✅ **Hệ thống hoạt động ổn định** với 4 peer nodes (MBBank, Charity, Supplier, Auditor)
 - ✅ **Tất cả core services** đã triển khai và sẵn sàng
-- ✅ **API Gateway** hoạt động hoàn hảo với database integration
-- ✅ **Blockchain network** ổn định với Besu validator
-- ✅ **Frontend application** đang khởi động
-- ✅ **IPFS storage** sẵn sàng cho chứng từ minh bạch
+- ✅ **API Gateway** hoạt động hoàn hảo với Fabric SDK integration
+- ✅ **Blockchain network** ổn định với Hyperledger Fabric
+- ✅ **Frontend application** hoạt động đầy đủ với Angular
+- ✅ **Block Explorer** sẵn sàng cho monitoring và audit
 
-**Sẵn sàng mở rộng quy mô quốc gia** với việc thêm các validator nodes từ các ngân hàng và tổ chức khác.
+**Sẵn sàng mở rộng quy mô quốc gia** với việc thêm các peer nodes từ các tổ chức và ngân hàng khác.

@@ -1,0 +1,201 @@
+---
+Organizations:
+  - &OrdererOrg
+    Name: OrdererOrg
+    ID: OrdererMSP
+    MSPDir: crypto-config/ordererOrganizations/kindledger.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('OrdererMSP.admin')"
+
+  - &MBBank
+    Name: MBBankMSP
+    ID: MBBankMSP
+    MSPDir: crypto-config/peerOrganizations/mb.kindledger.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('MBBankMSP.admin', 'MBBankMSP.peer', 'MBBankMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('MBBankMSP.admin', 'MBBankMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('MBBankMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('MBBankMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.mb.kindledger.com
+        Port: 7051
+
+  - &Charity
+    Name: CharityMSP
+    ID: CharityMSP
+    MSPDir: crypto-config/peerOrganizations/charity.kindledger.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('CharityMSP.admin', 'CharityMSP.peer', 'CharityMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('CharityMSP.admin', 'CharityMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('CharityMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('CharityMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.charity.kindledger.com
+        Port: 7051
+
+  - &Supplier
+    Name: SupplierMSP
+    ID: SupplierMSP
+    MSPDir: crypto-config/peerOrganizations/supplier.kindledger.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('SupplierMSP.admin', 'SupplierMSP.peer', 'SupplierMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('SupplierMSP.admin', 'SupplierMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('SupplierMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('SupplierMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.supplier.kindledger.com
+        Port: 7051
+
+  - &Auditor
+    Name: AuditorMSP
+    ID: AuditorMSP
+    MSPDir: crypto-config/peerOrganizations/auditor.kindledger.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('AuditorMSP.admin', 'AuditorMSP.peer', 'AuditorMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('AuditorMSP.admin', 'AuditorMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('AuditorMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('AuditorMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.auditor.kindledger.com
+        Port: 7051
+
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_0: true
+
+Application: &ApplicationDefaults
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    LifecycleEndorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+  Capabilities:
+    <<: *ApplicationCapabilities
+
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  EtcdRaft:
+    Consenters:
+      - Host: orderer.kindledger.com
+        Port: 7050
+        ClientTLSCert: crypto-config/ordererOrganizations/kindledger.com/orderers/orderer.kindledger.com/tls/server.crt
+        ServerTLSCert: crypto-config/ordererOrganizations/kindledger.com/orderers/orderer.kindledger.com/tls/server.crt
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 10
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 512 KB
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+  Capabilities:
+    <<: *ChannelCapabilities
+
+Profiles:
+  KindLedgerGenesis:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations:
+        - *OrdererOrg
+      Capabilities:
+        <<: *OrdererCapabilities
+    Consortiums:
+      KindLedgerConsortium:
+        Organizations:
+          - *MBBank
+          - *Charity
+          - *Supplier
+          - *Auditor
+
+  KindChannel:
+    <<: *ChannelDefaults
+    Consortium: KindLedgerConsortium
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *MBBank
+        - *Charity
+        - *Supplier
+        - *Auditor
+      Capabilities:
+        <<: *ApplicationCapabilities

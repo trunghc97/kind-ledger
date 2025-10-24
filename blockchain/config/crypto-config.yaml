@@ -1,0 +1,34 @@
+OrdererOrgs:
+  - Name: Orderer
+    Domain: orderer.kindledger.com
+    Specs:
+      - Hostname: orderer
+
+PeerOrgs:
+  - Name: MBBank
+    Domain: mb.kindledger.com
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
+  - Name: Charity
+    Domain: charity.kindledger.com
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
+  - Name: Supplier
+    Domain: supplier.kindledger.com
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+
+  - Name: Auditor
+    Domain: auditor.kindledger.com
+    Template:
+      Count: 1
+    Users:
+      Count: 1

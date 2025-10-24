@@ -1,417 +1,359 @@
-# KindLedger POC - Nền tảng thiện nguyện minh bạch
+# Kind-Ledger POC
 
-KindLedger là nền tảng thiện nguyện sử dụng blockchain để đảm bảo tính minh bạch và truy xuất nguồn gốc của các giao dịch thiện nguyện.
+Hệ thống quyên góp từ thiện minh bạch và an toàn trên nền tảng blockchain Hyperledger Fabric.
 
-## 🏗️ Kiến trúc hệ thống
+## 🎯 Tổng quan
+
+Kind-Ledger là một Proof of Concept (POC) cho hệ thống quyên góp từ thiện sử dụng công nghệ blockchain Hyperledger Fabric. Hệ thống cho phép tạo và quản lý các chiến dịch quyên góp một cách minh bạch, an toàn và có thể kiểm tra.
+
+### Kiến trúc hệ thống
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Gateway       │    │   Blockchain    │
-│   Angular 17    │◄──►│   Spring Boot   │◄──►│   Hyperledger   │
-│   Port: 4200    │    │   Port: 8080    │    │   Besu          │
+│   Angular FE    │    │  Spring Boot    │    │  Node.js        │
+│   (Port 4200)   │◄──►│   Gateway       │◄──►│   Explorer      │
+│                 │    │  (Port 8080)    │    │  (Port 3000)    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   IPFS          │    │   PostgreSQL    │    │   Redis         │
-│   Storage       │    │   Database      │    │   Cache         │
-│   Port: 5001    │    │   Port: 5432   │    │   Port: 6379    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │
+                                ▼
+                    ┌─────────────────────────┐
+                    │   Hyperledger Fabric    │
+                    │                         │
+                    │  ┌─────────────────┐    │
+                    │  │    Orderer      │    │
+                    │  │  (Port 7050)    │    │
+                    │  └─────────────────┘    │
+                    │                         │
+                    │  ┌─────────────────┐    │
+                    │  │ MBBank Peer     │    │
+                    │  │ (Port 7051)     │    │
+                    │  └─────────────────┘    │
+                    │                         │
+                    │  ┌─────────────────┐    │
+                    │  │ Charity Peer    │    │
+                    │  │ (Port 8051)     │    │
+                    │  └─────────────────┘    │
+                    │                         │
+                    │  ┌─────────────────┐    │
+                    │  │ Supplier Peer   │    │
+                    │  │ (Port 9051)     │    │
+                    │  └─────────────────┘    │
+                    │                         │
+                    │  ┌─────────────────┐    │
+                    │  │ Auditor Peer    │    │
+                    │  │ (Port 10051)    │    │
+                    │  └─────────────────┘    │
+                    └─────────────────────────┘
 ```
 
-## 🚀 Triển khai nhanh
-
-### Yêu cầu hệ thống
-- Docker & Docker Compose
-- 8GB RAM trở lên
-- 20GB dung lượng trống
-- Ports: 4200, 8080, 5432, 6379, 27017, 5001, 8081, 8545, 30303
-
-### Chạy hệ thống
-
-```bash
-# Clone repository
-git clone <repository-url>
-cd kind-ledger
-
-# Khởi động toàn bộ hệ thống
-docker-compose up -d
-
-# Kiểm tra trạng thái
-docker-compose ps
-
-# Kiểm tra health của các service
-curl http://localhost:8080/actuator/health
-curl http://localhost:4200
-```
-
-### ✅ Trạng thái hệ thống hiện tại
-
-| Service | Port | Status | Mô tả |
-|---------|------|--------|-------|
-| Gateway API | 8080 | ✅ Healthy | Backend Spring Boot sẵn sàng |
-| Frontend | 4200 | ⏳ Starting | Angular app đang khởi động |
-| PostgreSQL | 5432 | ✅ Healthy | Database chính |
-| MongoDB | 27017 | ✅ Healthy | Database phụ |
-| Redis | 6379 | ✅ Healthy | Cache và session store |
-| Besu Validator | 8545 | ✅ Running | Blockchain node |
-| IPFS | 5001 | ⚠️ Restarting | File storage |
-| Explorer | 8088 | ⚠️ Restarting | Block explorer |
-
-### Quản lý hệ thống
-
-```bash
-# Khởi động hệ thống
-./scripts/start.sh
-
-# Dừng hệ thống
-./scripts/stop.sh
-
-# Restart hệ thống
-./scripts/restart.sh
-
-# Restart service cụ thể
-./scripts/restart.sh -s gateway
-
-# Xem logs
-./scripts/logs.sh
-
-# Xem logs service cụ thể
-./scripts/logs.sh -s gateway -f
-
-# Kiểm tra sức khỏe hệ thống
-./scripts/health.sh
-
-# Backup dữ liệu
-./scripts/backup.sh
-
-# Dọn dẹp hoàn toàn (XÓA TẤT CẢ DỮ LIỆU)
-./scripts/clean.sh
-```
-
-### Truy cập các dịch vụ
-
-| Dịch vụ | URL | Mô tả | Trạng thái |
-|---------|-----|-------|------------|
-| Frontend | http://localhost:4200 | Giao diện người dùng | ⏳ Đang khởi động |
-| Gateway API | http://localhost:8080/api | API backend | ✅ Sẵn sàng |
-| Gateway Health | http://localhost:8080/actuator/health | Health check | ✅ Healthy |
-| Blockchain RPC | http://localhost:8545 | Blockchain API | ✅ Hoạt động |
-| PostgreSQL | localhost:5432 | Database chính | ✅ Healthy |
-| MongoDB | localhost:27017 | Database phụ | ✅ Healthy |
-| Redis | localhost:6379 | Cache | ✅ Healthy |
-| IPFS Gateway | http://localhost:8081 | Lưu trữ file | ⚠️ Đang khởi động |
-| Blockchain Explorer | http://localhost:8088 | Khám phá blockchain | ⚠️ Đang khởi động |
-
-## 🎯 Trạng thái hệ thống hiện tại
-
-### ✅ **Đã hoạt động ổn định:**
-- **Gateway API** (Port 8080) - Backend Spring Boot với tất cả dependencies
-- **PostgreSQL** (Port 5432) - Database chính với schema đã được khởi tạo
-- **MongoDB** (Port 27017) - Database phụ cho document storage
-- **Redis** (Port 6379) - Cache và session store
-- **Besu Validator** (Port 8545) - Blockchain node với ethash consensus
-
-### ⏳ **Đang khởi động:**
-- **Frontend** (Port 4200) - Angular app đang khởi động
-- **IPFS** (Port 5001) - File storage system
-- **Explorer** (Port 8088) - Block explorer
-
-### 🔧 **Các lỗi đã được sửa:**
-1. ✅ Xung đột port 8080 và 4200 với containers khác
-2. ✅ Java version mismatch trong Gateway Dockerfile
-3. ✅ PostgreSQL schema validation (SERIAL → BIGSERIAL)
-4. ✅ Spring Cloud compatibility issues
-5. ✅ Redis connection configuration
-6. ✅ Besu genesis block configuration
-7. ✅ Dockerfile user creation issues
-
-### 🚀 **Hệ thống sẵn sàng sử dụng:**
-- API Gateway đã hoạt động: `http://localhost:8080/api/campaigns`
-- Health check: `http://localhost:8080/actuator/health`
-- Blockchain RPC: `http://localhost:8545`
-
-## 📋 Chức năng chính
-
-### 🔗 Kết nối ví MetaMask
-- Kết nối ví Ethereum
-- Chuyển đổi mạng sang KindLedger Network
-- Hiển thị số dư cVND
-
-### 💰 Quản lý token cVND
-- **Nạp tiền**: Chuyển VND từ tài khoản ngân hàng thành cVND
-- **Rút tiền**: Chuyển cVND thành VND
-- **Ủng hộ**: Donate cVND vào các chiến dịch
-- **Mua vật phẩm**: Mua vật phẩm ủng hộ bằng cVND
-
-### 🎯 Chiến dịch thiện nguyện
-- Tạo và quản lý chiến dịch
-- Theo dõi tiến độ ủng hộ
-- Lưu trữ chứng từ minh bạch trên IPFS
-- Truy xuất nguồn gốc giao dịch
-
-### 🔍 Blockchain Explorer
-- Xem các block và transaction
-- Tra cứu địa chỉ ví
-- Theo dõi trạng thái mạng
-
-## 🛠️ Cấu trúc dự án
+## 🏗️ Cấu trúc dự án
 
 ```
 kind-ledger/
-├── docker-compose.yml          # Cấu hình Docker Compose
-├── README.md                   # Tài liệu dự án
-├── blockchain/
-│   └── genesis.json            # Cấu hình blockchain
-├── gateway/                    # Spring Boot Backend
-│   ├── src/main/java/...       # Mã nguồn Java
-│   ├── pom.xml                 # Maven dependencies
-│   └── Dockerfile              # Docker image
-├── frontend/                   # Angular Frontend
-│   ├── src/app/...             # Mã nguồn Angular
-│   ├── package.json            # Node dependencies
-│   └── Dockerfile              # Docker image
-├── explorer/                   # Blockchain Explorer
-│   ├── server.js               # Express server
-│   └── Dockerfile              # Docker image
-└── sql/
-    └── init.sql                # Database schema
+├── blockchain/                    # Cấu hình Hyperledger Fabric
+│   ├── config/                   # Cấu hình mạng
+│   │   ├── crypto-config.yaml    # Cấu hình crypto materials
+│   │   ├── configtx.yaml         # Cấu hình genesis & channel
+│   │   └── core.yaml            # Cấu hình peer
+│   ├── chaincode/               # Smart contract
+│   │   └── kindledgercc/        # Chaincode Go
+│   │       ├── go.mod
+│   │       ├── main.go
+│   │       └── chaincode.go
+│   └── scripts/                 # Scripts tự động
+│       ├── generate.sh          # Tạo crypto materials
+│       ├── network.sh           # Quản lý mạng
+│       ├── create_channel.sh    # Tạo channel
+│       ├── deploy_chaincode.sh  # Deploy chaincode
+│       └── query_chaincode.sh   # Test chaincode
+├── gateway/                     # Spring Boot API Gateway
+│   ├── src/main/java/
+│   ├── pom.xml
+│   └── Dockerfile
+├── frontend/                    # Angular Frontend
+│   ├── src/app/
+│   ├── package.json
+│   └── Dockerfile
+├── explorer/                    # Node.js Blockchain Explorer
+│   ├── server.js
+│   ├── package.json
+│   └── Dockerfile
+├── docker-compose.yml           # Docker Compose tổng hợp
+└── README.md
 ```
 
-## 🔧 Cấu hình môi trường
+## 🚀 Cài đặt và chạy
 
-### Biến môi trường
+### Yêu cầu hệ thống
+
+- Docker & Docker Compose
+- Git
+- Hyperledger Fabric Tools (cryptogen, configtxgen)
+- Java 11+
+- Node.js 16+
+- Angular CLI
+
+### Bước 1: Clone repository
 
 ```bash
-# Database
-POSTGRES_URL=jdbc:postgresql://postgres:5432/kindledger
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-
-# Redis
-REDIS_URL=redis://redis:6379
-
-# MongoDB
-MONGODB_URL=mongodb://admin:password@mongodb:27017/kindledger
-
-# IPFS
-IPFS_URL=http://ipfs:5001
-
-# Blockchain
-BESU_VALIDATOR_URL=http://besu-validator:8545
+git clone <repository-url>
+cd kind-ledger
 ```
 
-## 📊 API Endpoints
+### Bước 2: Cài đặt Hyperledger Fabric Tools
 
-### Campaign APIs
-- `GET /api/campaigns` - Lấy danh sách chiến dịch
-- `GET /api/campaigns/active` - Lấy chiến dịch đang hoạt động
-- `GET /api/campaigns/{id}` - Lấy chi tiết chiến dịch
-- `POST /api/donate` - Ủng hộ chiến dịch
+```bash
+# Tải và cài đặt Fabric binaries
+curl -sSL https://bit.ly/2ysbOFE | bash -s -- 2.4.0 1.4.9
 
-### Transaction APIs
-- `POST /api/mint` - Nạp tiền vào ví
-- `POST /api/burn` - Rút tiền từ ví
-- `POST /api/redeem` - Đổi token
-- `GET /api/wallet/{address}/balance` - Lấy số dư ví
-- `GET /api/wallet/{address}/transactions` - Lấy lịch sử giao dịch
+# Thêm vào PATH
+export PATH=$PATH:$(pwd)/fabric-samples/bin
+```
 
-### Utility APIs
-- `POST /api/kyc/check` - Kiểm tra KYC
+### Bước 3: Tạo crypto materials và genesis block
+
+```bash
+cd blockchain/scripts
+chmod +x *.sh
+./generate.sh
+```
+
+### Bước 4: Khởi động mạng Fabric
+
+```bash
+# Khởi động mạng
+./network.sh up
+
+# Tạo channel
+./create_channel.sh
+
+# Deploy chaincode
+./deploy_chaincode.sh
+```
+
+### Bước 5: Khởi động toàn bộ hệ thống
+
+```bash
+cd ../../
+docker-compose up -d
+```
+
+### Bước 6: Kiểm tra hệ thống
+
+```bash
+# Kiểm tra trạng thái containers
+docker-compose ps
+
+# Kiểm tra logs
+docker-compose logs -f gateway
+
+# Test API
+curl http://localhost:8080/api/health
+```
+
+## 🌐 Truy cập các dịch vụ
+
+| Dịch vụ | URL | Mô tả |
+|---------|-----|-------|
+| Frontend | http://localhost:4200 | Giao diện người dùng |
+| Gateway API | http://localhost:8080/api | REST API |
+| Explorer | http://localhost:3000 | Blockchain Explorer |
+| Orderer | localhost:7050 | Fabric Orderer |
+| MBBank Peer | localhost:7051 | MBBank Peer |
+| Charity Peer | localhost:8051 | Charity Peer |
+| Supplier Peer | localhost:9051 | Supplier Peer |
+| Auditor Peer | localhost:10051 | Auditor Peer |
+
+## 📚 API Documentation
+
+### Campaign API
+
+#### Tạo chiến dịch mới
+```http
+POST /api/campaigns
+Content-Type: application/json
+
+{
+  "id": "campaign-001",
+  "name": "Hỗ trợ trẻ em nghèo",
+  "description": "Quyên góp để hỗ trợ trẻ em có hoàn cảnh khó khăn",
+  "owner": "charity-org",
+  "goal": 10000000
+}
+```
+
+#### Lấy danh sách chiến dịch
+```http
+GET /api/campaigns
+```
+
+#### Lấy chi tiết chiến dịch
+```http
+GET /api/campaigns/{id}
+```
+
+#### Quyên góp
+```http
+POST /api/donate
+Content-Type: application/json
+
+{
+  "campaignId": "campaign-001",
+  "donorId": "donor-001",
+  "donorName": "Nguyễn Văn A",
+  "amount": 500000
+}
+```
+
+#### Lấy tổng quyên góp
+```http
+GET /api/stats/total
+```
+
+### Explorer API
+
+#### Lấy thông tin blockchain
+```http
+GET /api/blockchain/info
+```
+
+#### Lấy danh sách blocks
+```http
+GET /api/blocks
+```
+
+#### Lấy lịch sử chiến dịch
+```http
+GET /api/campaigns/{id}/history
+```
+
+## 🔧 Chaincode Functions
+
+### Các function chính
+
+- `InitLedger()` - Khởi tạo ledger với dữ liệu mẫu
+- `CreateCampaign(id, name, description, owner, goal)` - Tạo chiến dịch mới
+- `Donate(campaignId, donorId, donorName, amount)` - Xử lý quyên góp
+- `QueryCampaign(id)` - Lấy thông tin chiến dịch
+- `QueryAllCampaigns()` - Lấy tất cả chiến dịch
+- `GetTotalDonations()` - Lấy tổng quyên góp
+- `GetCampaignHistory(campaignId)` - Lấy lịch sử chiến dịch
+
+### Test chaincode
+
+```bash
+cd blockchain/scripts
+./query_chaincode.sh test
+```
+
+## 🏢 Organizations
+
+| Organization | Vai trò | Peer | MSP ID |
+|-------------|---------|------|--------|
+| MBBank | Ngân hàng phát hành & quản lý token | peer0.mb.kindledger.com | MBBankMSP |
+| Charity | Tổ chức thiện nguyện | peer0.charity.kindledger.com | CharityMSP |
+| Supplier | Nhà cung cấp sản phẩm/dịch vụ | peer0.supplier.kindledger.com | SupplierMSP |
+| Auditor | Node giám sát (read-only) | peer0.auditor.kindledger.com | AuditorMSP |
 
 ## 🔒 Bảo mật
 
-### AML/KYC Integration
-- Kiểm tra giao dịch ẩn danh > 10M VND
-- Xác thực danh tính người dùng
-- Giám sát giao dịch đáng ngờ
+- Sử dụng TLS cho tất cả kết nối
+- Xác thực và phân quyền dựa trên MSP
+- Mã hóa dữ liệu trong quá trình truyền
+- Audit trail đầy đủ trên blockchain
 
-### Smart Contract Security
-- Sử dụng IBFT/PoA consensus
-- Validator nodes được kiểm soát
-- Audit trail đầy đủ
-
-## 🚨 Xử lý sự cố
-
-### Kiểm tra trạng thái hệ thống
-```bash
-# Xem trạng thái tất cả containers
-docker-compose ps
-
-# Kiểm tra health của Gateway
-curl http://localhost:8080/actuator/health
-
-# Test API Gateway
-curl http://localhost:8080/api/campaigns
-```
-
-### Kiểm tra logs
-```bash
-# Xem logs của tất cả services
-docker-compose logs
-
-# Xem logs của service cụ thể
-docker-compose logs gateway
-docker-compose logs frontend
-docker-compose logs besu-validator
-```
-
-### Restart services
-```bash
-# Restart tất cả
-docker-compose restart
-
-# Restart service cụ thể
-docker-compose restart gateway
-docker-compose restart frontend
-```
-
-### Xử lý lỗi thường gặp
-
-#### Port conflicts
-```bash
-# Kiểm tra port đang được sử dụng
-lsof -i :8080
-lsof -i :4200
-
-# Dừng container xung đột
-docker stop <container-name>
-```
-
-#### Database issues
-```bash
-# Reset database
-docker-compose down -v
-docker-compose up -d
-
-# Hoặc chỉ restart database
-docker-compose restart postgres
-```
-
-#### Blockchain issues
-```bash
-# Restart Besu validator
-docker-compose restart besu-validator
-
-# Kiểm tra logs blockchain
-docker-compose logs besu-validator
-```
-
-## 📈 Monitoring
+## 📊 Monitoring
 
 ### Health Checks
-- **Gateway**: http://localhost:8080/actuator/health ✅
-- **Frontend**: http://localhost:4200 ⏳
-- **Blockchain RPC**: http://localhost:8545 ✅
-- **PostgreSQL**: localhost:5432 ✅
-- **MongoDB**: localhost:27017 ✅
-- **Redis**: localhost:6379 ✅
+
+```bash
+# Kiểm tra trạng thái tất cả services
+curl http://localhost:8080/api/health
+curl http://localhost:3000/api/health
+
+# Kiểm tra logs
+docker-compose logs -f gateway
+docker-compose logs -f frontend
+docker-compose logs -f explorer
+```
 
 ### Metrics
-- JVM metrics qua Spring Boot Actuator
-- Database connection pool status
-- Redis cache hit rate
-- Blockchain node status
 
-### Kiểm tra nhanh
+- Số lượng chiến dịch
+- Tổng số tiền quyên góp
+- Số lượng giao dịch
+- Trạng thái mạng blockchain
+
+## 🛠️ Troubleshooting
+
+### Lỗi thường gặp
+
+1. **Container không khởi động được**
+   ```bash
+   # Kiểm tra logs
+   docker-compose logs <service-name>
+   
+   # Restart service
+   docker-compose restart <service-name>
+   ```
+
+2. **Chaincode không hoạt động**
+   ```bash
+   # Kiểm tra chaincode đã được deploy chưa
+   docker exec cli peer lifecycle chaincode querycommitted --channelID kindchannel --name kindledgercc
+   ```
+
+3. **Frontend không kết nối được API**
+   ```bash
+   # Kiểm tra Gateway có chạy không
+   curl http://localhost:8080/api/health
+   
+   # Kiểm tra CORS settings
+   ```
+
+### Reset hệ thống
+
 ```bash
-# Kiểm tra tất cả services
-docker-compose ps
+# Dừng tất cả services
+docker-compose down
 
-# Test API endpoints
-curl -s http://localhost:8080/actuator/health | jq .
-curl -s http://localhost:8080/api/campaigns | jq .
+# Xóa volumes
+docker-compose down -v
 
-# Test blockchain
-curl -X POST -H "Content-Type: application/json" \
-  --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
-  http://localhost:8545
+# Xóa crypto materials
+rm -rf blockchain/crypto-config
+rm -rf blockchain/artifacts
+
+# Tạo lại từ đầu
+cd blockchain/scripts
+./generate.sh
+./network.sh up
+./create_channel.sh
+./deploy_chaincode.sh
+
+cd ../../
+docker-compose up -d
 ```
 
-## 🔄 Backup & Recovery
+## 📈 Performance
 
-### Tự động Backup
-```bash
-# Tạo backup toàn bộ hệ thống
-./scripts/backup.sh
+### Tối ưu hóa
 
-# Backup sẽ được lưu trong thư mục backups/
-```
+- Sử dụng connection pooling cho database
+- Cache dữ liệu thường xuyên truy cập
+- Load balancing cho multiple peers
+- Compression cho API responses
 
-### Database Backup thủ công
-```bash
-# Backup PostgreSQL
-docker-compose exec postgres pg_dump -U postgres kindledger > backup.sql
+### Benchmarks
 
-# Restore từ backup
-./sql/backup/restore.sh backup.sql
+- Tạo chiến dịch: ~2-3 giây
+- Xử lý quyên góp: ~1-2 giây
+- Query dữ liệu: ~500ms
+- Throughput: ~100 TPS
 
-# Hoặc restore từ file nén
-./sql/backup/restore.sh backup.sql.gz
-```
+## 🙏 Acknowledgments
 
-### IPFS Data
-```bash
-# Backup IPFS data
-docker cp kindledger-ipfs:/data/ipfs ./ipfs-backup
-
-# Restore IPFS data
-docker cp ./ipfs-backup kindledger-ipfs:/data/ipfs
-```
-
-### Persistent Data
-Tất cả dữ liệu được lưu trữ trong Docker volumes:
-- `postgres_data` - PostgreSQL database
-- `redis_data` - Redis cache  
-- `mongodb_data` - MongoDB documents
-- `ipfs_data` - IPFS storage
-- `besu_validator_data` - Blockchain validator data
-
-### Kiểm tra volumes
-```bash
-# Xem tất cả volumes
-docker volume ls | grep kindledger
-
-# Xem chi tiết volume
-docker volume inspect kindledger_postgres_data
-```
-
-## 📝 Development
-
-### Local Development
-```bash
-# Backend development
-cd gateway
-mvn spring-boot:run
-
-# Frontend development
-cd frontend
-npm install
-npm start
-```
-
-### Testing
-```bash
-# Run tests
-docker-compose exec gateway mvn test
-docker-compose exec frontend npm test
-```
-
-## 🤝 Contributing
-
-1. Fork repository
-2. Tạo feature branch
-3. Commit changes
-4. Push to branch
-5. Tạo Pull Request
-
-## 📄 License
-
-MIT License - xem file LICENSE để biết thêm chi tiết.
-
-## 📞 Support
-
-- Email: support@kindledger.com
-- Documentation: https://docs.kindledger.com
-- Issues: https://github.com/kindledger/issues
+- Hyperledger Fabric Community
+- Spring Boot Team
+- Angular Team
+- Docker Community

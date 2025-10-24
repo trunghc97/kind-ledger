@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kind-Ledger Explorer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .card {
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .status-up { background-color: #28a745; }
+        .status-down { background-color: #dc3545; }
+        .block-hash {
+            font-family: monospace;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-search me-2"></i>
+                Kind-Ledger Explorer
+            </a>
+            <div class="navbar-nav">
+                <span class="navbar-text">
+                    <span id="status-indicator" class="status-indicator status-down"></span>
+                    <span id="status-text">Đang kết nối...</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">
+                            <i class="fas fa-list me-2"></i>
+                            <span id="total-campaigns">-</span>
+                        </h5>
+                        <p class="card-text">Tổng chiến dịch</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-success">
+                            <i class="fas fa-coins me-2"></i>
+                            <span id="total-donations">-</span>
+                        </h5>
+                        <p class="card-text">Tổng quyên góp</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-info">
+                            <i class="fas fa-cube me-2"></i>
+                            <span id="block-height">-</span>
+                        </h5>
+                        <p class="card-text">Chiều cao block</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-warning">
+                            <i class="fas fa-clock me-2"></i>
+                            <span id="last-update">-</span>
+                        </h5>
+                        <p class="card-text">Cập nhật cuối</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav nav-tabs" id="explorerTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="campaigns-tab" data-bs-toggle="tab" data-bs-target="#campaigns" type="button" role="tab">
+                    <i class="fas fa-hand-holding-heart me-2"></i>
+                    Chiến dịch
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="blocks-tab" data-bs-toggle="tab" data-bs-target="#blocks" type="button" role="tab">
+                    <i class="fas fa-cubes me-2"></i>
+                    Blocks
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="blockchain-tab" data-bs-toggle="tab" data-bs-target="#blockchain" type="button" role="tab">
+                    <i class="fas fa-link me-2"></i>
+                    Blockchain Info
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="explorerTabsContent">
+            <!-- Campaigns Tab -->
+            <div class="tab-pane fade show active" id="campaigns" role="tabpanel">
+                <div class="card mt-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Danh sách chiến dịch</h5>
+                        <button class="btn btn-outline-primary btn-sm" onclick="loadCampaigns()">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            Làm mới
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="campaigns-loading" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Đang tải...</span>
+                            </div>
+                        </div>
+                        <div id="campaigns-content"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blocks Tab -->
+            <div class="tab-pane fade" id="blocks" role="tabpanel">
+                <div class="card mt-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Blocks gần đây</h5>
+                        <button class="btn btn-outline-primary btn-sm" onclick="loadBlocks()">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            Làm mới
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="blocks-loading" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Đang tải...</span>
+                            </div>
+                        </div>
+                        <div id="blocks-content"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blockchain Info Tab -->
+            <div class="tab-pane fade" id="blockchain" role="tabpanel">
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Thông tin Blockchain</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="blockchain-loading" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Đang tải...</span>
+                            </div>
+                        </div>
+                        <div id="blockchain-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let isConnected = false;
+
+        // Check connection status
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                isConnected = data.fabric === 'Connected';
+                
+                const indicator = document.getElementById('status-indicator');
+                const text = document.getElementById('status-text');
+                
+                if (isConnected) {
+                    indicator.className = 'status-indicator status-up';
+                    text.textContent = 'Đã kết nối';
+                } else {
+                    indicator.className = 'status-indicator status-down';
+                    text.textContent = 'Mất kết nối';
+                }
+            } catch (error) {
+                console.error('Status check failed:', error);
+                isConnected = false;
+                document.getElementById('status-indicator').className = 'status-indicator status-down';
+                document.getElementById('status-text').textContent = 'Lỗi kết nối';
+            }
+        }
+
+        // Load campaigns
+        async function loadCampaigns() {
+            const loading = document.getElementById('campaigns-loading');
+            const content = document.getElementById('campaigns-content');
+            
+            loading.style.display = 'block';
+            content.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/campaigns');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayCampaigns(data.data);
+                } else {
+                    content.innerHTML = `<div class="alert alert-danger">Lỗi: ${data.error}</div>`;
+                }
+            } catch (error) {
+                content.innerHTML = `<div class="alert alert-danger">Lỗi tải dữ liệu: ${error.message}</div>`;
+            }
+            
+            loading.style.display = 'none';
+        }
+
+        // Display campaigns
+        function displayCampaigns(campaigns) {
+            const content = document.getElementById('campaigns-content');
+            
+            if (campaigns.length === 0) {
+                content.innerHTML = '<div class="text-center py-4"><p class="text-muted">Không có chiến dịch nào</p></div>';
+                return;
+            }
+            
+            let html = '<div class="row">';
+            campaigns.forEach(campaign => {
+                const progress = campaign.goal > 0 ? (campaign.raised / campaign.goal) * 100 : 0;
+                const statusClass = campaign.status === 'COMPLETED' ? 'success' : 'primary';
+                
+                html += `
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">${campaign.name}</h6>
+                                <p class="card-text text-muted small">${campaign.description}</p>
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">Tiến độ</small>
+                                        <small class="fw-bold">${formatCurrency(campaign.raised)}</small>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-${statusClass}" style="width: ${Math.min(progress, 100)}%"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between mt-1">
+                                        <small class="text-muted">${progress.toFixed(1)}%</small>
+                                        <small class="text-muted">${formatCurrency(campaign.goal)}</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-${statusClass}">${campaign.status === 'COMPLETED' ? 'Hoàn thành' : 'Đang mở'}</span>
+                                    <small class="text-muted">${campaign.owner}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            content.innerHTML = html;
+        }
+
+        // Load blocks
+        async function loadBlocks() {
+            const loading = document.getElementById('blocks-loading');
+            const content = document.getElementById('blocks-content');
+            
+            loading.style.display = 'block';
+            content.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/blocks');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayBlocks(data.data);
+                } else {
+                    content.innerHTML = `<div class="alert alert-danger">Lỗi: ${data.error}</div>`;
+                }
+            } catch (error) {
+                content.innerHTML = `<div class="alert alert-danger">Lỗi tải dữ liệu: ${error.message}</div>`;
+            }
+            
+            loading.style.display = 'none';
+        }
+
+        // Display blocks
+        function displayBlocks(blocks) {
+            const content = document.getElementById('blocks-content');
+            
+            if (blocks.length === 0) {
+                content.innerHTML = '<div class="text-center py-4"><p class="text-muted">Không có block nào</p></div>';
+                return;
+            }
+            
+            let html = '<div class="table-responsive"><table class="table table-striped"><thead><tr><th>Block #</th><th>Hash</th><th>Previous Hash</th><th>Transactions</th><th>Timestamp</th></tr></thead><tbody>';
+            
+            blocks.forEach(block => {
+                html += `
+                    <tr>
+                        <td><strong>${block.blockNumber}</strong></td>
+                        <td><code class="block-hash">${block.blockHash.substring(0, 16)}...</code></td>
+                        <td><code class="block-hash">${block.previousHash.substring(0, 16)}...</code></td>
+                        <td><span class="badge bg-info">${block.transactionCount}</span></td>
+                        <td><small>${new Date(block.timestamp).toLocaleString('vi-VN')}</small></td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            content.innerHTML = html;
+        }
+
+        // Load blockchain info
+        async function loadBlockchainInfo() {
+            const loading = document.getElementById('blockchain-loading');
+            const content = document.getElementById('blockchain-content');
+            
+            loading.style.display = 'block';
+            content.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/blockchain/info');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayBlockchainInfo(data.data);
+                } else {
+                    content.innerHTML = `<div class="alert alert-danger">Lỗi: ${data.error}</div>`;
+                }
+            } catch (error) {
+                content.innerHTML = `<div class="alert alert-danger">Lỗi tải dữ liệu: ${error.message}</div>`;
+            }
+            
+            loading.style.display = 'none';
+        }
+
+        // Display blockchain info
+        function displayBlockchainInfo(info) {
+            const content = document.getElementById('blockchain-content');
+            
+            content.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Thông tin cơ bản</h6>
+                        <table class="table table-sm">
+                            <tr><td><strong>Chiều cao:</strong></td><td>${info.height}</td></tr>
+                            <tr><td><strong>Block hiện tại:</strong></td><td><code class="block-hash">${info.currentBlockHash}</code></td></tr>
+                            <tr><td><strong>Block trước:</strong></td><td><code class="block-hash">${info.previousBlockHash}</code></td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Thông tin mạng</h6>
+                        <table class="table table-sm">
+                            <tr><td><strong>Channel:</strong></td><td>kindchannel</td></tr>
+                            <tr><td><strong>Chaincode:</strong></td><td>kindledgercc</td></tr>
+                            <tr><td><strong>Organizations:</strong></td><td>4 (MB, Charity, Supplier, Auditor)</td></tr>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load statistics
+        async function loadStatistics() {
+            try {
+                // Load campaigns count
+                const campaignsResponse = await fetch('/api/campaigns');
+                const campaignsData = await campaignsResponse.json();
+                if (campaignsData.success) {
+                    document.getElementById('total-campaigns').textContent = campaignsData.data.length;
+                }
+
+                // Load total donations
+                const donationsResponse = await fetch('/api/stats/total');
+                const donationsData = await donationsResponse.json();
+                if (donationsData.success) {
+                    document.getElementById('total-donations').textContent = formatCurrency(donationsData.data);
+                }
+
+                // Load block height
+                const blockchainResponse = await fetch('/api/blockchain/info');
+                const blockchainData = await blockchainResponse.json();
+                if (blockchainData.success) {
+                    document.getElementById('block-height').textContent = blockchainData.data.height;
+                }
+
+                // Update last update time
+                document.getElementById('last-update').textContent = new Date().toLocaleTimeString('vi-VN');
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        // Format currency
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN', {
+                style: 'currency',
+                currency: 'VND'
+            }).format(amount);
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            checkStatus();
+            loadStatistics();
+            loadCampaigns();
+            
+            // Set up tab event listeners
+            document.getElementById('campaigns-tab').addEventListener('click', loadCampaigns);
+            document.getElementById('blocks-tab').addEventListener('click', loadBlocks);
+            document.getElementById('blockchain-tab').addEventListener('click', loadBlockchainInfo);
+            
+            // Auto-refresh every 30 seconds
+            setInterval(() => {
+                checkStatus();
+                loadStatistics();
+            }, 30000);
+        });
+    </script>
+</body>
+</html>

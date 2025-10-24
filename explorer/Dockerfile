@@ -1,25 +1,31 @@
 FROM node:18-alpine
 
+# Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apk add --no-cache curl
-
-# Copy package files
+# Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies (this layer will be cached if package.json doesn't change)
+RUN npm install --legacy-peer-deps --omit=dev && npm cache clean --force
 
-# Copy application code
-COPY server.js ./
+# Copy source code
+COPY . .
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8088/api/health || exit 1
+# Create wallet directory
+RUN mkdir -p wallet
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+RUN chown -R nextjs:nodejs /app
+USER nextjs
 
 # Expose port
-EXPOSE 8088
+EXPOSE 3000
 
-# Start the explorer
-CMD ["node", "server.js"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:3000 || exit 1
+
+# Start the application
+CMD ["npm", "start"]

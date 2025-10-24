@@ -1,0 +1,126 @@
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">
+          <h1 class="h3 mb-0">
+            <i class="fas fa-plus-circle text-primary me-2"></i>
+            Tạo chiến dịch mới
+          </h1>
+        </div>
+        <div class="card-body">
+          <!-- Success Message -->
+          <div *ngIf="success" class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            Chiến dịch đã được tạo thành công! Đang chuyển hướng...
+            <div class="spinner-border spinner-border-sm ms-2" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+
+          <!-- Error Message -->
+          <div *ngIf="error" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            {{ error }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+
+          <form [formGroup]="campaignForm" (ngSubmit)="onSubmit()">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="id" class="form-label">Mã chiến dịch *</label>
+                  <input type="text" 
+                         class="form-control" 
+                         id="id" 
+                         formControlName="id"
+                         [class.is-invalid]="campaignForm.get('id')?.invalid && campaignForm.get('id')?.touched">
+                  <div class="invalid-feedback">
+                    {{ getFieldError('id') }}
+                  </div>
+                  <div class="form-text">Mã duy nhất để nhận diện chiến dịch</div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="owner" class="form-label">Tổ chức *</label>
+                  <input type="text" 
+                         class="form-control" 
+                         id="owner" 
+                         formControlName="owner"
+                         placeholder="Ví dụ: Tổ chức từ thiện ABC"
+                         [class.is-invalid]="campaignForm.get('owner')?.invalid && campaignForm.get('owner')?.touched">
+                  <div class="invalid-feedback">
+                    {{ getFieldError('owner') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="name" class="form-label">Tên chiến dịch *</label>
+              <input type="text" 
+                     class="form-control" 
+                     id="name" 
+                     formControlName="name"
+                     placeholder="Ví dụ: Hỗ trợ trẻ em nghèo"
+                     [class.is-invalid]="campaignForm.get('name')?.invalid && campaignForm.get('name')?.touched">
+              <div class="invalid-feedback">
+                {{ getFieldError('name') }}
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="description" class="form-label">Mô tả chi tiết *</label>
+              <textarea class="form-control" 
+                        id="description" 
+                        formControlName="description"
+                        rows="4"
+                        placeholder="Mô tả chi tiết về mục đích và cách sử dụng quỹ quyên góp..."
+                        [class.is-invalid]="campaignForm.get('description')?.invalid && campaignForm.get('description')?.touched"></textarea>
+              <div class="invalid-feedback">
+                {{ getFieldError('description') }}
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label for="goal" class="form-label">Mục tiêu quyên góp (VND) *</label>
+              <div class="input-group">
+                <span class="input-group-text">₫</span>
+                <input type="number" 
+                       class="form-control" 
+                       id="goal" 
+                       formControlName="goal"
+                       placeholder="10000000"
+                       min="1000000"
+                       [class.is-invalid]="campaignForm.get('goal')?.invalid && campaignForm.get('goal')?.touched">
+                <div class="invalid-feedback">
+                  {{ getFieldError('goal') }}
+                </div>
+              </div>
+              <div class="form-text">Số tiền tối thiểu: {{ formatCurrency(1000000) }}</div>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" 
+                      class="btn btn-primary"
+                      [disabled]="loading || campaignForm.invalid">
+                <span *ngIf="loading" class="spinner-border spinner-border-sm me-2" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </span>
+                <i *ngIf="!loading" class="fas fa-save me-2"></i>
+                {{ loading ? 'Đang tạo...' : 'Tạo chiến dịch' }}
+              </button>
+              <button type="button" 
+                      class="btn btn-outline-secondary"
+                      routerLink="/campaigns">
+                <i class="fas fa-times me-2"></i>
+                Hủy
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
