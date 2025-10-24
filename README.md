@@ -1,234 +1,306 @@
-# KindLedger - Hệ thống chuyển tiền thiện nguyện token hóa
+# KindLedger POC - Nền tảng thiện nguyện minh bạch
 
-KindLedger là hệ thống chuyển tiền thiện nguyện sử dụng công nghệ blockchain với mô hình Bank-as-Node, đảm bảo minh bạch tuyệt đối trong hành trình tiền từ thiện.
+KindLedger là nền tảng thiện nguyện sử dụng blockchain để đảm bảo tính minh bạch và truy xuất nguồn gốc của các giao dịch thiện nguyện.
 
 ## 🏗️ Kiến trúc hệ thống
 
-Hệ thống được thiết kế theo kiến trúc microservices với các thành phần chính:
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │   Gateway       │    │   Blockchain    │
+│   Angular 17    │◄──►│   Spring Boot   │◄──►│   Hyperledger   │
+│   Port: 4200    │    │   Port: 8080    │    │   Besu          │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   IPFS          │    │   PostgreSQL    │    │   Redis         │
+│   Storage       │    │   Database      │    │   Cache         │
+│   Port: 5001    │    │   Port: 5432   │    │   Port: 6379    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
 
-- **Frontend App** (React/Next.js) - Port: 4200
-- **API Gateway** (Spring Cloud Gateway) - Port: 8080  
-- **Blockchain Gateway** (Golang) - Port: 9090
-- **Peer Nodes** (Golang - MB Bank & Charity) - Ports: 8082, 8083
-- **Orderer Cluster** (Golang) - Ports: 7050, 7051, 7052
-- **External Services** (IPFS, Explorer, Gov Observer - Golang) - Ports: 5001, 8088, 7070
-- **Core Banking** (Golang Mock) - Port: 8089
-
-## 🚀 Hướng dẫn chạy project
+## 🚀 Triển khai nhanh
 
 ### Yêu cầu hệ thống
-
 - Docker & Docker Compose
 - 8GB RAM trở lên
 - 20GB dung lượng trống
+- Ports: 4200, 8080, 8088, 5432, 6379, 27017, 5001, 8081, 8545, 8546
 
-### Cách chạy
+### Chạy hệ thống
 
-1. **Clone repository:**
 ```bash
+# Clone repository
 git clone <repository-url>
 cd kind-ledger
-```
 
-2. **Chạy toàn bộ hệ thống:**
-```bash
+# Khởi động toàn bộ hệ thống
+./scripts/start.sh
+
+# Hoặc sử dụng Docker Compose trực tiếp
 docker-compose up -d
+
+# Kiểm tra trạng thái
+./scripts/health.sh
 ```
 
-3. **Kiểm tra trạng thái services:**
+### Quản lý hệ thống
+
 ```bash
-docker-compose ps
+# Khởi động hệ thống
+./scripts/start.sh
+
+# Dừng hệ thống
+./scripts/stop.sh
+
+# Restart hệ thống
+./scripts/restart.sh
+
+# Restart service cụ thể
+./scripts/restart.sh -s gateway
+
+# Xem logs
+./scripts/logs.sh
+
+# Xem logs service cụ thể
+./scripts/logs.sh -s gateway -f
+
+# Kiểm tra sức khỏe hệ thống
+./scripts/health.sh
+
+# Backup dữ liệu
+./scripts/backup.sh
+
+# Dọn dẹp hoàn toàn (XÓA TẤT CẢ DỮ LIỆU)
+./scripts/clean.sh
 ```
 
-4. **Xem logs của service cụ thể:**
-```bash
-docker-compose logs -f <service-name>
-```
+### Truy cập các dịch vụ
 
-### 🌐 Truy cập các services
+| Dịch vụ | URL | Mô tả |
+|---------|-----|-------|
+| Frontend | http://localhost:4200 | Giao diện người dùng |
+| Gateway API | http://localhost:8080/api | API backend |
+| Blockchain Explorer | http://localhost:8088 | Khám phá blockchain |
+| IPFS Gateway | http://localhost:8081 | Lưu trữ file |
 
-Sau khi chạy thành công, bạn có thể truy cập:
+## 📋 Chức năng chính
 
-- **Frontend App**: http://localhost:4200
-- **API Gateway**: http://localhost:8080
-- **Block Explorer**: http://localhost:8088
-- **Blockchain Gateway**: http://localhost:9090
-- **MB Bank Peer**: http://localhost:8082
-- **Charity Peer**: http://localhost:8083
-- **Orderer-1**: http://localhost:7050
-- **Gov Observer**: http://localhost:7070
-- **Core Banking**: http://localhost:8089
+### 🔗 Kết nối ví MetaMask
+- Kết nối ví Ethereum
+- Chuyển đổi mạng sang KindLedger Network
+- Hiển thị số dư cVND
 
-### 🔧 Các lệnh quản lý
+### 💰 Quản lý token cVND
+- **Nạp tiền**: Chuyển VND từ tài khoản ngân hàng thành cVND
+- **Rút tiền**: Chuyển cVND thành VND
+- **Ủng hộ**: Donate cVND vào các chiến dịch
+- **Mua vật phẩm**: Mua vật phẩm ủng hộ bằng cVND
 
-**Dừng tất cả services:**
-```bash
-docker-compose down
-```
+### 🎯 Chiến dịch thiện nguyện
+- Tạo và quản lý chiến dịch
+- Theo dõi tiến độ ủng hộ
+- Lưu trữ chứng từ minh bạch trên IPFS
+- Truy xuất nguồn gốc giao dịch
 
-**Dừng và xóa volumes:**
-```bash
-docker-compose down -v
-```
+### 🔍 Blockchain Explorer
+- Xem các block và transaction
+- Tra cứu địa chỉ ví
+- Theo dõi trạng thái mạng
 
-**Rebuild và chạy lại:**
-```bash
-docker-compose up --build -d
-```
-
-**Xem logs real-time:**
-```bash
-docker-compose logs -f
-```
-
-### 📊 Monitoring & Health Checks
-
-Tất cả services đều có health check endpoints:
-
-- API Gateway: http://localhost:8080/actuator/health
-- Blockchain Gateway: http://localhost:9090/api/blockchain/health
-- MB Bank Peer: http://localhost:8082/api/peer/health
-- Charity Peer: http://localhost:8083/api/charity/health
-- Orderer: http://localhost:7050/api/orderer/health
-- Gov Observer: http://localhost:7070/api/observer/health
-- Core Banking: http://localhost:8089/api/banking/health
-
-### 🧪 Testing APIs
-
-**Kiểm tra số dư:**
-```bash
-curl http://localhost:9090/api/blockchain/balance/0x1234567890abcdef
-```
-
-**Mint tokens:**
-```bash
-curl -X POST http://localhost:9090/api/blockchain/mint \
-  -H "Content-Type: application/json" \
-  -d '{"amount": "1000", "wallet": "0x1234567890abcdef"}'
-```
-
-**Tạo chiến dịch từ thiện:**
-```bash
-curl -X POST http://localhost:8083/api/charity/create-campaign \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Hỗ trợ trẻ em", "description": "Chiến dịch hỗ trợ trẻ em nghèo", "target": "1000000", "duration": 30}'
-```
-
-**Quyên góp:**
-```bash
-curl -X POST http://localhost:9090/api/blockchain/donate \
-  -H "Content-Type: application/json" \
-  -d '{"campaignId": "camp_20231201120000", "amount": "100"}'
-```
-
-**Tạo campaign:**
-```bash
-curl -X POST http://localhost:8083/api/charity/create-campaign \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Test Campaign", "description": "Test campaign description", "target": "5000", "duration": 30}'
-```
-
-**Kiểm tra MongoDB:**
-```bash
-# Kết nối MongoDB Shared
-docker exec -it kind-ledger-mongodb-shared-1 mongosh -u admin -p password
-
-# Kết nối MongoDB MB Peer
-docker exec -it kind-ledger-mongodb-mb-1 mongosh -u mb_admin -p mb_password
-
-# Xem collections
-use kindledger_shared
-show collections
-db.transactions.find().limit(5)
-```
-
-### 🐛 Troubleshooting
-
-**Nếu services không start được:**
-1. Kiểm tra ports có bị conflict không
-2. Xem logs: `docker-compose logs <service-name>`
-3. Restart service: `docker-compose restart <service-name>`
-
-**Nếu frontend không kết nối được API:**
-1. Kiểm tra API Gateway có chạy không
-2. Kiểm tra CORS settings
-3. Xem network tab trong browser dev tools
-
-**Nếu blockchain services lỗi:**
-1. Kiểm tra MongoDB có chạy không
-2. Kiểm tra network connectivity giữa services
-3. Xem logs của blockchain-gateway
-
-### 📁 Cấu trúc project
+## 🛠️ Cấu trúc dự án
 
 ```
 kind-ledger/
-├── docker-compose.yml          # Docker Compose configuration
-├── frontend/                   # React/Next.js Frontend
-├── api-gateway/               # Spring Cloud Gateway (Java)
-├── blockchain-gateway/        # Blockchain Gateway Service (Golang)
-├── peer-nodes/
-│   ├── mb-peer/              # MB Bank Peer Node (Golang)
-│   └── charity-peer/         # Charity Organization Peer (Golang)
-├── orderer/                  # Orderer Service (Golang)
-├── block-explorer/           # Block Explorer (Node.js)
-├── gov-observer/             # Government Observer (Golang)
-├── core-banking/             # Core Banking Mock (Golang)
-└── documents/
-    └── intro.md              # Technical Documentation
+├── docker-compose.yml          # Cấu hình Docker Compose
+├── README.md                   # Tài liệu dự án
+├── blockchain/
+│   └── genesis.json            # Cấu hình blockchain
+├── gateway/                    # Spring Boot Backend
+│   ├── src/main/java/...       # Mã nguồn Java
+│   ├── pom.xml                 # Maven dependencies
+│   └── Dockerfile              # Docker image
+├── frontend/                   # Angular Frontend
+│   ├── src/app/...             # Mã nguồn Angular
+│   ├── package.json            # Node dependencies
+│   └── Dockerfile              # Docker image
+├── explorer/                   # Blockchain Explorer
+│   ├── server.js               # Express server
+│   └── Dockerfile              # Docker image
+└── sql/
+    └── init.sql                # Database schema
 ```
 
-### 🔐 Bảo mật
+## 🔧 Cấu hình môi trường
 
-- Tất cả services chạy trong Docker network riêng
-- Chỉ expose ports cần thiết ra ngoài
-- Sử dụng environment variables cho configuration
-- Mock data cho development, production cần cấu hình thật
+### Biến môi trường
 
-### 📈 Performance
+```bash
+# Database
+POSTGRES_URL=jdbc:postgresql://postgres:5432/kindledger
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
 
-- **Golang services**: Hiệu năng cao, ít tài nguyên, khởi động nhanh
-- **Java API Gateway**: Ổn định, ecosystem phong phú
-- **Node.js Frontend**: Development nhanh, hot reload
-- Hệ thống được tối ưu cho development
-- Production cần cấu hình resource limits
-- Sử dụng volumes cho data persistence
-- Load balancing cho high availability
+# Redis
+REDIS_URL=redis://redis:6379
 
-### 🛠️ Tech Stack
+# MongoDB
+MONGODB_URL=mongodb://admin:password@mongodb:27017/kindledger
 
-- **Frontend**: React/Next.js, TypeScript
-- **API Gateway**: Spring Cloud Gateway (Java 17)
-- **Blockchain Services**: Golang 1.21, Gin framework
-- **Database**: MongoDB 6.0 (Multiple instances with persistent volumes)
-- **Storage**: IPFS
-- **Containerization**: Docker & Docker Compose
+# IPFS
+IPFS_URL=http://ipfs:5001
 
-### 🗄️ Database Architecture
+# Blockchain
+BESU_VALIDATOR_URL=http://besu-validator:8545
+BESU_OBSERVER_URL=http://besu-observer:8545
+```
 
-**MongoDB Shared (Central)**
-- Port: 27017
-- Database: `kindledger_shared`
-- Collections: `transactions`, `blocks`, `campaigns`, `users`, `audit_logs`
+## 📊 API Endpoints
 
-**MongoDB per Node**
-- **MB Peer**: Port 27018, Database `mb_ledger`
-- **Charity Peer**: Port 27019, Database `charity_ledger`
-- **Orderer**: Port 27020, Database `orderer_ledger`
-- **Gov Observer**: Port 27021, Database `gov_ledger`
-- **Core Banking**: Port 27022, Database `banking_ledger`
+### Campaign APIs
+- `GET /api/campaigns` - Lấy danh sách chiến dịch
+- `GET /api/campaigns/active` - Lấy chiến dịch đang hoạt động
+- `GET /api/campaigns/{id}` - Lấy chi tiết chiến dịch
+- `POST /api/donate` - Ủng hộ chiến dịch
 
-**Persistent Volumes**
-- Tất cả MongoDB sử dụng persistent volumes để đảm bảo dữ liệu không bị mất khi restart
-- Volumes: `mongodb_shared_data`, `mongodb_mb_data`, `mongodb_charity_data`, `mongodb_orderer_data`, `mongodb_gov_data`, `mongodb_banking_data`
+### Transaction APIs
+- `POST /api/mint` - Nạp tiền vào ví
+- `POST /api/burn` - Rút tiền từ ví
+- `POST /api/redeem` - Đổi token
+- `GET /api/wallet/{address}/balance` - Lấy số dư ví
+- `GET /api/wallet/{address}/transactions` - Lấy lịch sử giao dịch
 
-### 🤝 Contributing
+### Utility APIs
+- `POST /api/kyc/check` - Kiểm tra KYC
+
+## 🔒 Bảo mật
+
+### AML/KYC Integration
+- Kiểm tra giao dịch ẩn danh > 10M VND
+- Xác thực danh tính người dùng
+- Giám sát giao dịch đáng ngờ
+
+### Smart Contract Security
+- Sử dụng IBFT/PoA consensus
+- Validator nodes được kiểm soát
+- Audit trail đầy đủ
+
+## 🚨 Xử lý sự cố
+
+### Kiểm tra logs
+```bash
+# Xem logs của tất cả services
+docker-compose logs
+
+# Xem logs của service cụ thể
+docker-compose logs gateway
+docker-compose logs frontend
+```
+
+### Restart services
+```bash
+# Restart tất cả
+docker-compose restart
+
+# Restart service cụ thể
+docker-compose restart gateway
+```
+
+### Reset database
+```bash
+# Xóa volumes và restart
+docker-compose down -v
+docker-compose up -d
+```
+
+## 📈 Monitoring
+
+### Health Checks
+- Gateway: http://localhost:8080/actuator/health
+- Frontend: http://localhost:4200
+- Explorer: http://localhost:8088/api/health
+
+### Metrics
+- JVM metrics qua Spring Boot Actuator
+- Database connection pool
+- Redis cache hit rate
+
+## 🔄 Backup & Recovery
+
+### Tự động Backup
+```bash
+# Tạo backup toàn bộ hệ thống
+./scripts/backup.sh
+
+# Backup sẽ được lưu trong thư mục backups/
+```
+
+### Database Backup thủ công
+```bash
+# Backup PostgreSQL
+docker-compose exec postgres pg_dump -U postgres kindledger > backup.sql
+
+# Restore từ backup
+./sql/backup/restore.sh backup.sql
+
+# Hoặc restore từ file nén
+./sql/backup/restore.sh backup.sql.gz
+```
+
+### IPFS Data
+```bash
+# Backup IPFS data
+docker cp kindledger-ipfs:/data/ipfs ./ipfs-backup
+
+# Restore IPFS data
+docker cp ./ipfs-backup kindledger-ipfs:/data/ipfs
+```
+
+### Persistent Data
+Tất cả dữ liệu được lưu trữ trong thư mục `./data/`:
+- `./data/postgres/` - PostgreSQL database
+- `./data/redis/` - Redis cache
+- `./data/mongodb/` - MongoDB documents
+- `./data/ipfs/` - IPFS storage
+- `./data/besu-validator/` - Blockchain validator data
+- `./data/besu-observer/` - Blockchain observer data
+
+## 📝 Development
+
+### Local Development
+```bash
+# Backend development
+cd gateway
+mvn spring-boot:run
+
+# Frontend development
+cd frontend
+npm install
+npm start
+```
+
+### Testing
+```bash
+# Run tests
+docker-compose exec gateway mvn test
+docker-compose exec frontend npm test
+```
+
+## 🤝 Contributing
 
 1. Fork repository
 2. Tạo feature branch
 3. Commit changes
-4. Push và tạo Pull Request
+4. Push to branch
+5. Tạo Pull Request
 
-### 📄 License
+## 📄 License
 
-Dự án này được phát triển cho mục đích nghiên cứu và phát triển hệ thống blockchain cho thiện nguyện.
+MIT License - xem file LICENSE để biết thêm chi tiết.
+
+## 📞 Support
+
+- Email: support@kindledger.com
+- Documentation: https://docs.kindledger.com
+- Issues: https://github.com/kindledger/issues

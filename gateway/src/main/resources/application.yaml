@@ -1,0 +1,71 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: kindledger-gateway
+  
+  profiles:
+    active: docker
+  
+  cloud:
+    compatibility-verifier:
+      enabled: false
+  
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/kindledger}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
+
+# Blockchain Configuration
+blockchain:
+  besu:
+    validator:
+      url: ${BESU_VALIDATOR_URL:http://localhost:8545}
+    observer:
+      url: ${BESU_OBSERVER_URL:http://localhost:8546}
+  gas:
+    limit: 21000
+    price: 20000000000 # 20 Gwei
+
+# IPFS Configuration
+ipfs:
+  url: ${IPFS_URL:http://localhost:5001}
+  gateway: ${IPFS_GATEWAY:http://localhost:8081}
+
+# MongoDB Configuration
+mongodb:
+  uri: ${MONGODB_URL:mongodb://localhost:27017/kindledger}
+
+# Logging
+logging:
+  level:
+    com.mbbank.kindledger: DEBUG
+    org.web3j: INFO
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

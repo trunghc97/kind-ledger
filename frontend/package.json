@@ -1,29 +1,47 @@
 {
   "name": "kindledger-frontend",
-  "version": "0.1.0",
-  "private": true,
+  "version": "1.0.0",
+  "description": "KindLedger Frontend Application",
   "scripts": {
-    "dev": "next dev -p 4200",
-    "build": "next build",
-    "start": "next start -p 4200",
-    "lint": "next lint"
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "build:prod": "ng build --configuration production"
   },
   "dependencies": {
-    "next": "14.0.0",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "axios": "^1.6.0",
-    "web3": "^4.2.0",
-    "@web3-react/core": "^8.2.0",
-    "@web3-react/injected-connector": "^6.0.7",
-    "ethers": "^6.8.0"
+    "@angular/animations": "^16.0.0",
+    "@angular/common": "^16.0.0",
+    "@angular/compiler": "^16.0.0",
+    "@angular/core": "^16.0.0",
+    "@angular/forms": "^16.0.0",
+    "@angular/platform-browser": "^16.0.0",
+    "@angular/platform-browser-dynamic": "^16.0.0",
+    "@angular/router": "^16.0.0",
+    "@angular/material": "^16.0.0",
+    "@angular/cdk": "^16.0.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.13.0",
+    "web3": "^4.3.0",
+    "@metamask/detect-provider": "^2.0.0"
   },
   "devDependencies": {
-    "@types/node": "20.8.0",
-    "@types/react": "18.2.0",
-    "@types/react-dom": "18.2.0",
-    "eslint": "8.52.0",
-    "eslint-config-next": "14.0.0",
-    "typescript": "5.2.2"
+    "@angular-devkit/build-angular": "^16.0.0",
+    "@angular/cli": "^16.0.0",
+    "@angular/compiler-cli": "^16.0.0",
+    "@types/jasmine": "~4.3.0",
+    "@types/node": "^18.18.0",
+    "jasmine-core": "~4.6.0",
+    "karma": "~6.4.0",
+    "karma-chrome-launcher": "~3.2.0",
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "~5.1.0",
+    "karma-jasmine-html-reporter": "~2.1.0",
+    "typescript": "~5.1.0",
+    "tailwindcss": "^3.3.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0"
   }
 }
