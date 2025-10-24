@@ -43,7 +43,7 @@ services:
       - kindledger-net
 
   mongodb:
-    image: mongo:6
+    image: mongo:latest
     container_name: kindledger-mongodb
     restart: unless-stopped
     ports:
