@@ -70,4 +70,11 @@ out/
 # Angular
 .angular/
 
+# Fabric binaries (should be installed via Docker)
+bin/
+
+# Fabric builders (generated during chaincode build)
+builders/
+
+# Persistent data directories
 data/*
