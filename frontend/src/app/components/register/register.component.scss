@@ -1,0 +1,30 @@
+.card {
+  border: none;
+  border-radius: 10px;
+}
+
+.card-body {
+  padding: 2.5rem;
+}
+
+.form-label {
+  font-weight: 500;
+  color: #333;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  padding: 12px;
+  font-weight: 600;
+  transition: transform 0.2s;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+}
+
+.btn-primary:disabled {
+  transform: none;
+}
+

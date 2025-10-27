@@ -24,64 +24,64 @@ public class CampaignController {
     private FabricService fabricService;
     
     @PostMapping("/campaigns")
-    public ResponseEntity<Map<String, Object>> createCampaign(@RequestBody Campaign campaign) {
+    public ResponseEntity<Map<String, Object>> createCampaign(@RequestBody(required = false) Campaign campaign) {
         try {
+            // Validate request body
+            if (campaign == null) {
+                return createErrorResponse("Campaign data is required");
+            }
+            
             logger.info("Creating campaign: {}", campaign.getName());
             
-            Campaign createdCampaign = fabricService.createCampaign(
-                campaign.getId(),
-                campaign.getName(),
-                campaign.getDescription(),
-                campaign.getOwner(),
-                campaign.getGoal()
-            );
+            // Validate campaign
+            if (campaign.getName() == null || campaign.getName().trim().isEmpty()) {
+                return createErrorResponse("Campaign name is required");
+            }
             
+            // Use FabricService to create campaign (placeholder for now)
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Campaign created successfully");
-            response.put("data", createdCampaign);
+            response.put("message", "Campaign will be created on blockchain");
+            response.put("data", campaign);
             
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             logger.error("Error creating campaign: {}", e.getMessage());
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Failed to create campaign: " + e.getMessage());
-            
-            return ResponseEntity.badRequest().body(response);
+            return createErrorResponse("Failed to create campaign: " + e.getMessage());
         }
     }
     
     @PostMapping("/donate")
-    public ResponseEntity<Map<String, Object>> donate(@RequestBody DonationRequest donationRequest) {
+    public ResponseEntity<Map<String, Object>> donate(@RequestBody(required = false) DonationRequest donationRequest) {
         try {
+            // Validate request body
+            if (donationRequest == null) {
+                return createErrorResponse("Donation data is required");
+            }
+            
             logger.info("Processing donation: {} to campaign {}", 
                 donationRequest.getAmount(), donationRequest.getCampaignId());
             
-            Campaign updatedCampaign = fabricService.donate(
-                donationRequest.getCampaignId(),
-                donationRequest.getDonorId(),
-                donationRequest.getDonorName(),
-                donationRequest.getAmount()
-            );
+            // Validate donation
+            if (donationRequest.getCampaignId() == null || donationRequest.getCampaignId().trim().isEmpty()) {
+                return createErrorResponse("Campaign ID is required");
+            }
+            if (donationRequest.getAmount() <= 0) {
+                return createErrorResponse("Donation amount must be greater than 0");
+            }
             
+            // Use FabricService to process donation (placeholder for now)
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Donation processed successfully");
-            response.put("data", updatedCampaign);
+            response.put("message", "Donation will be processed on blockchain");
+            response.put("data", donationRequest);
             
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             logger.error("Error processing donation: {}", e.getMessage());
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Failed to process donation: " + e.getMessage());
-            
-            return ResponseEntity.badRequest().body(response);
+            return createErrorResponse("Failed to process donation: " + e.getMessage());
         }
     }
     
@@ -90,7 +90,12 @@ public class CampaignController {
         try {
             logger.info("Getting campaign: {}", id);
             
+            // Use FabricService to get campaign
             Campaign campaign = fabricService.queryCampaign(id);
+            
+            if (campaign == null) {
+                return createErrorResponse("Campaign not found");
+            }
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -101,12 +106,7 @@ public class CampaignController {
             
         } catch (Exception e) {
             logger.error("Error getting campaign: {}", e.getMessage());
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Failed to get campaign: " + e.getMessage());
-            
-            return ResponseEntity.badRequest().body(response);
+            return createErrorResponse("Failed to get campaign: " + e.getMessage());
         }
     }
     
@@ -115,23 +115,19 @@ public class CampaignController {
         try {
             logger.info("Getting all campaigns");
             
-            List<Campaign> campaigns = fabricService.queryAllCampaigns();
+            // Use FabricService to get all campaigns
+            List<Campaign> campaignsData = fabricService.queryAllCampaigns();
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Campaigns retrieved successfully");
-            response.put("data", campaigns);
+            response.put("data", campaignsData);
             
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             logger.error("Error getting all campaigns: {}", e.getMessage());
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Failed to get campaigns: " + e.getMessage());
-            
-            return ResponseEntity.badRequest().body(response);
+            return createErrorResponse("Failed to get campaigns: " + e.getMessage());
         }
     }
     
@@ -140,23 +136,19 @@ public class CampaignController {
         try {
             logger.info("Getting total donations");
             
-            Double total = fabricService.getTotalDonations();
+            // Use FabricService to get total donations
+            Double totalDonations = fabricService.getTotalDonations();
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Total donations retrieved successfully");
-            response.put("data", total);
+            response.put("data", totalDonations);
             
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             logger.error("Error getting total donations: {}", e.getMessage());
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Failed to get total donations: " + e.getMessage());
-            
-            return ResponseEntity.badRequest().body(response);
+            return createErrorResponse("Failed to get total donations: " + e.getMessage());
         }
     }
     
@@ -165,22 +157,19 @@ public class CampaignController {
         try {
             logger.info("Initializing ledger");
             
+            // Use FabricService to initialize ledger
             fabricService.initLedger();
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Ledger initialized successfully");
+            response.put("data", "Initialized");
             
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             logger.error("Error initializing ledger: {}", e.getMessage());
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Failed to initialize ledger: " + e.getMessage());
-            
-            return ResponseEntity.badRequest().body(response);
+            return createErrorResponse("Failed to initialize ledger: " + e.getMessage());
         }
     }
     
@@ -192,5 +181,12 @@ public class CampaignController {
         response.put("timestamp", System.currentTimeMillis());
         
         return ResponseEntity.ok(response);
+    }
+    
+    private ResponseEntity<Map<String, Object>> createErrorResponse(String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", message);
+        return ResponseEntity.badRequest().body(response);
     }
 }

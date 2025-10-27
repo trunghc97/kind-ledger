@@ -20,19 +20,22 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Install serve globally
-RUN npm install -g serve
+# Install nginx
+RUN apk add --no-cache nginx
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
-USER nextjs
+# Copy nginx config
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Copy built files to nginx html directory
+RUN mkdir -p /usr/share/nginx/html && \
+    cp -r dist/kindledger-frontend/* /usr/share/nginx/html/
 
 # Expose port
 EXPOSE 4200
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD wget --quiet --tries=1 --spider http://localhost:4200 || exit 1
 
-# Start the application
-CMD ["serve", "-s", "dist/kindledger-frontend", "-l", "4200"]
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

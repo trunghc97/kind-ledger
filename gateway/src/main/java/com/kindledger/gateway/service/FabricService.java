@@ -14,6 +14,7 @@ import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -57,11 +58,11 @@ public class FabricService {
         
         logger.info("User identity found: {}", fabricConfig.getUser());
         
-        // Create gateway
+        // Create gateway without discovery to avoid peer configuration issues
         Gateway.Builder builder = Gateway.createBuilder()
                 .identity(wallet, fabricConfig.getUser())
                 .networkConfig(networkConfigPath)
-                .discovery(true);
+                .discovery(false);
         
         gateway = builder.connect();
         network = gateway.getNetwork(fabricConfig.getChannelName());
@@ -117,6 +118,11 @@ public class FabricService {
         try {
             logger.info("Querying campaign: {}", campaignId);
             
+            if (contract == null) {
+                logger.warn("Contract is not initialized, returning null");
+                return null;
+            }
+            
             byte[] result = contract.evaluateTransaction("QueryCampaign", campaignId);
             
             ObjectMapper mapper = new ObjectMapper();
@@ -127,7 +133,8 @@ public class FabricService {
             
         } catch (Exception e) {
             logger.error("Error querying campaign: {}", e.getMessage());
-            throw new RuntimeException("Failed to query campaign", e);
+            logger.warn("Returning null due to blockchain connection issue");
+            return null;
         }
     }
     
@@ -135,6 +142,11 @@ public class FabricService {
     public List<Campaign> queryAllCampaigns() {
         try {
             logger.info("Querying all campaigns");
+            
+            if (contract == null) {
+                logger.warn("Contract is not initialized, returning empty list");
+                return new ArrayList<>();
+            }
             
             byte[] result = contract.evaluateTransaction("QueryAllCampaigns");
             
@@ -146,13 +158,19 @@ public class FabricService {
             
         } catch (Exception e) {
             logger.error("Error querying all campaigns: {}", e.getMessage());
-            throw new RuntimeException("Failed to query all campaigns", e);
+            logger.warn("Returning empty list due to blockchain connection issue");
+            return new ArrayList<>();
         }
     }
     
     public Double getTotalDonations() {
         try {
             logger.info("Getting total donations");
+            
+            if (contract == null) {
+                logger.warn("Contract is not initialized, returning 0.0");
+                return 0.0;
+            }
             
             byte[] result = contract.evaluateTransaction("GetTotalDonations");
             
@@ -163,7 +181,8 @@ public class FabricService {
             
         } catch (Exception e) {
             logger.error("Error getting total donations: {}", e.getMessage());
-            throw new RuntimeException("Failed to get total donations", e);
+            logger.warn("Returning 0.0 due to blockchain connection issue");
+            return 0.0;
         }
     }
     

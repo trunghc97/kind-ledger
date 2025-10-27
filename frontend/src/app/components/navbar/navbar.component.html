@@ -36,10 +36,16 @@
       </ul>
       
       <ul class="navbar-nav">
-        <li class="nav-item">
-          <a class="nav-link" href="http://localhost:8080/api/health" target="_blank">
-            <i class="fas fa-server me-1"></i>
-            API Status
+        <li class="nav-item" *ngIf="currentUser">
+          <span class="nav-link">
+            <i class="fas fa-user me-1"></i>
+            {{ currentUser.fullName }}
+          </span>
+        </li>
+        <li class="nav-item" *ngIf="currentUser">
+          <a class="nav-link" (click)="logout()" style="cursor: pointer;">
+            <i class="fas fa-sign-out-alt me-1"></i>
+            Đăng xuất
           </a>
         </li>
       </ul>

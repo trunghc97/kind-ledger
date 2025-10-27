@@ -5,15 +5,20 @@ import { CampaignListComponent } from './components/campaign-list/campaign-list.
 import { CampaignDetailComponent } from './components/campaign-detail/campaign-detail.component';
 import { CreateCampaignComponent } from './components/create-campaign/create-campaign.component';
 import { DonateComponent } from './components/donate/donate.component';
+import { LoginComponent } from './components/login/login.component';
+import { RegisterComponent } from './components/register/register.component';
+import { AuthGuard } from './guards/auth.guard';
 
 const routes: Routes = [
-  { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
-  { path: 'dashboard', component: DashboardComponent },
-  { path: 'campaigns', component: CampaignListComponent },
-  { path: 'campaigns/:id', component: CampaignDetailComponent },
-  { path: 'create-campaign', component: CreateCampaignComponent },
-  { path: 'donate/:id', component: DonateComponent },
-  { path: '**', redirectTo: '/dashboard' }
+  { path: '', redirectTo: '/login', pathMatch: 'full' },
+  { path: 'login', component: LoginComponent },
+  { path: 'register', component: RegisterComponent },
+  { path: 'dashboard', component: DashboardComponent, canActivate: [AuthGuard] },
+  { path: 'campaigns', component: CampaignListComponent, canActivate: [AuthGuard] },
+  { path: 'campaigns/:id', component: CampaignDetailComponent, canActivate: [AuthGuard] },
+  { path: 'create-campaign', component: CreateCampaignComponent, canActivate: [AuthGuard] },
+  { path: 'donate/:id', component: DonateComponent, canActivate: [AuthGuard] },
+  { path: '**', redirectTo: '/login' }
 ];
 
 @NgModule({
