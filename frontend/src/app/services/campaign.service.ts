@@ -39,7 +39,7 @@ export interface ApiResponse<T> {
   providedIn: 'root'
 })
 export class CampaignService {
-  private apiUrl = 'http://localhost:8080/api';
+  private apiUrl = '/api';
 
   constructor(private http: HttpClient) { }
 
