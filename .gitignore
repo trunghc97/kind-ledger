@@ -78,3 +78,76 @@ builders/
 
 # Persistent data directories
 data/*
+!data/.gitkeep
+!data/mongo/.gitkeep
+!data/postgres/.gitkeep
+!data/redis/.gitkeep
+!data/java/.gitkeep
+!data/go/.gitkeep
+
+# Blockchain generated files (from setup.sh)
+blockchain/crypto-config/
+blockchain/artifacts/
+
+# Wallet files (contain sensitive keys)
+gateway/wallet/
+explorer/wallet/
+
+# Setup flag
+.init-completed
+
+# IDE and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Compiler outputs
+*.class
+*.jar
+*.war
+*.ear
+*.so
+*.dylib
+
+# Maven
+.m2/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Node modules
+**/node_modules/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs
+dist/
+build/
+out/
+target/
+
+# Angular
+.angular/
+*.ngsummary.json
+**/*.ngfactory.ts
+**/*.shim.ts
