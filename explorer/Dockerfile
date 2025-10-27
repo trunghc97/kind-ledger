@@ -3,11 +3,16 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
+# Create node_modules directory for volume mount
+RUN mkdir -p /app/node_modules
+
 # Copy package files first for better caching
 COPY package*.json ./
 
 # Install dependencies (this layer will be cached if package.json doesn't change)
-RUN npm install --legacy-peer-deps --omit=dev && npm cache clean --force
+# Use existing cache from volume if available
+RUN npm install --legacy-peer-deps --omit=dev || npm ci --legacy-peer-deps --omit=dev
+RUN npm cache clean --force
 
 # Copy source code
 COPY . .

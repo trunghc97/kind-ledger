@@ -66,7 +66,7 @@
               <div class="card-body">
                 <div class="d-flex justify-content-between">
                   <div>
-                    <h4 class="card-title">{{ campaigns.filter(c => c.status === 'COMPLETED').length }}</h4>
+                    <h4 class="card-title">{{ getCompletedCampaignsCount() }}</h4>
                     <p class="card-text">Chiến dịch hoàn thành</p>
                   </div>
                   <div class="align-self-center">

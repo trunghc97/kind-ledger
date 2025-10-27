@@ -3,7 +3,7 @@ Organizations:
   - &OrdererOrg
     Name: OrdererOrg
     ID: OrdererMSP
-    MSPDir: crypto-config/ordererOrganizations/kindledger.com/msp
+    MSPDir: crypto-config/ordererOrganizations/orderer.kindledger.com/msp
     Policies:
       Readers:
         Type: Signature
@@ -134,8 +134,8 @@ Orderer: &OrdererDefaults
     Consenters:
       - Host: orderer.kindledger.com
         Port: 7050
-        ClientTLSCert: crypto-config/ordererOrganizations/kindledger.com/orderers/orderer.kindledger.com/tls/server.crt
-        ServerTLSCert: crypto-config/ordererOrganizations/kindledger.com/orderers/orderer.kindledger.com/tls/server.crt
+        ClientTLSCert: crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/tls/server.crt
+        ServerTLSCert: crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/tls/server.crt
   BatchTimeout: 2s
   BatchSize:
     MaxMessageCount: 10

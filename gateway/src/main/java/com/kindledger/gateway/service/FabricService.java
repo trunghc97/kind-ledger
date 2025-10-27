@@ -37,14 +37,25 @@ public class FabricService {
         Path networkConfigPath = Paths.get(fabricConfig.getNetworkConfigPath());
         
         // Load wallet
-        Path walletPath = Paths.get("wallet");
+        Path walletPath = Paths.get("/opt/gopath/src/github.com/hyperledger/fabric/peer/wallet");
+        logger.info("Wallet path: {}", walletPath);
+        logger.info("Wallet exists: {}", walletPath.toFile().exists());
+        logger.info("Wallet contents: {}", java.util.Arrays.toString(walletPath.toFile().list()));
+        
         Wallet wallet = Wallets.newFileSystemWallet(walletPath);
         
-        // Load user identity
-        if (!wallet.exists(fabricConfig.getUser())) {
+        // Check if user exists
+        logger.info("Looking for user: {}", fabricConfig.getUser());
+        logger.info("Available users in wallet: {}", wallet.list());
+        
+        Identity userIdentity = wallet.get(fabricConfig.getUser());
+        if (userIdentity == null) {
             logger.error("User {} not found in wallet", fabricConfig.getUser());
+            logger.error("Please ensure wallet identity file exists: {}/{}.id", walletPath, fabricConfig.getUser());
             throw new Exception("User not found in wallet");
         }
+        
+        logger.info("User identity found: {}", fabricConfig.getUser());
         
         // Create gateway
         Gateway.Builder builder = Gateway.createBuilder()

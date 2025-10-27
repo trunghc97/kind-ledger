@@ -1,0 +1,176 @@
+name: kindledger-network
+version: "1.0"
+
+client:
+  organization: MBBank
+  connection:
+    timeout:
+      peer:
+        endorser: "300"
+
+organizations:
+  MBBank:
+    mspid: MBBankMSP
+    peers:
+      - peer0.mb.kindledger.com
+    certificateAuthorities:
+      - ca.mb.kindledger.com
+
+  Charity:
+    mspid: CharityMSP
+    peers:
+      - peer0.charity.kindledger.com
+    certificateAuthorities:
+      - ca.charity.kindledger.com
+
+  Supplier:
+    mspid: SupplierMSP
+    peers:
+      - peer0.supplier.kindledger.com
+    certificateAuthorities:
+      - ca.supplier.kindledger.com
+
+  Auditor:
+    mspid: AuditorMSP
+    peers:
+      - peer0.auditor.kindledger.com
+    certificateAuthorities:
+      - ca.auditor.kindledger.com
+
+orderers:
+  orderer.kindledger.com:
+    url: grpc://localhost:7050
+    grpcOptions:
+      ssl-target-name-override: orderer.kindledger.com
+      grpc.keepalive_time_ms: 600000
+      grpc.keepalive_timeout_ms: 20000000
+      grpc.keepalive_permit_without_calls: true
+      grpc.http2.max_pings_without_data: 0
+      grpc.http2.min_time_between_pings_ms: 10000
+      grpc.http2.min_ping_interval_without_data_ms: 300000
+    tlsCACerts:
+      path: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/kindledger.com/orderers/orderer.kindledger.com/msp/tlscacerts/tlsca.kindledger.com-cert.pem
+
+peers:
+  peer0.mb.kindledger.com:
+    url: grpc://localhost:7051
+    grpcOptions:
+      ssl-target-name-override: peer0.mb.kindledger.com
+      grpc.keepalive_time_ms: 600000
+      grpc.keepalive_timeout_ms: 20000000
+      grpc.keepalive_permit_without_calls: true
+      grpc.http2.max_pings_without_data: 0
+      grpc.http2.min_time_between_pings_ms: 10000
+      grpc.http2.min_ping_interval_without_data_ms: 300000
+    tlsCACerts:
+      path: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/msp/tlscacerts/ca.mb.kindledger.com-cert.pem
+
+  peer0.charity.kindledger.com:
+    url: grpc://localhost:8051
+    grpcOptions:
+      ssl-target-name-override: peer0.charity.kindledger.com
+      grpc.keepalive_time_ms: 600000
+      grpc.keepalive_timeout_ms: 20000000
+      grpc.keepalive_permit_without_calls: true
+      grpc.http2.max_pings_without_data: 0
+      grpc.http2.min_time_between_pings_ms: 10000
+      grpc.http2.min_ping_interval_without_data_ms: 300000
+    tlsCACerts:
+      path: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/charity.kindledger.com/peers/peer0.charity.kindledger.com/msp/tlscacerts/ca.charity.kindledger.com-cert.pem
+
+  peer0.supplier.kindledger.com:
+    url: grpc://localhost:9051
+    grpcOptions:
+      ssl-target-name-override: peer0.supplier.kindledger.com
+      grpc.keepalive_time_ms: 600000
+      grpc.keepalive_timeout_ms: 20000000
+      grpc.keepalive_permit_without_calls: true
+      grpc.http2.max_pings_without_data: 0
+      grpc.http2.min_time_between_pings_ms: 10000
+      grpc.http2.min_ping_interval_without_data_ms: 300000
+    tlsCACerts:
+      path: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/supplier.kindledger.com/peers/peer0.supplier.kindledger.com/msp/tlscacerts/ca.supplier.kindledger.com-cert.pem
+
+  peer0.auditor.kindledger.com:
+    url: grpc://localhost:10051
+    grpcOptions:
+      ssl-target-name-override: peer0.auditor.kindledger.com
+      grpc.keepalive_time_ms: 600000
+      grpc.keepalive_timeout_ms: 20000000
+      grpc.keepalive_permit_without_calls: true
+      grpc.http2.max_pings_without_data: 0
+      grpc.http2.min_time_between_pings_ms: 10000
+      grpc.http2.min_ping_interval_without_data_ms: 300000
+    tlsCACerts:
+      path: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/auditor.kindledger.com/peers/peer0.auditor.kindledger.com/msp/tlscacerts/ca.auditor.kindledger.com-cert.pem
+
+certificateAuthorities:
+  ca.mb.kindledger.com:
+    url: https://localhost:7054
+    httpOptions:
+      verify: false
+    tlsCACerts:
+      path: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/mb.kindledger.com/ca/ca.mb.kindledger.com-cert.pem
+    registrar:
+      - enrollId: admin
+        enrollSecret: adminpw
+    caName: ca.mb.kindledger.com
+
+  ca.charity.kindledger.com:
+    url: https://localhost:8054
+    httpOptions:
+      verify: false
+    tlsCACerts:
+      path: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/charity.kindledger.com/ca/ca.charity.kindledger.com-cert.pem
+    registrar:
+      - enrollId: admin
+        enrollSecret: adminpw
+    caName: ca.charity.kindledger.com
+
+  ca.supplier.kindledger.com:
+    url: https://localhost:9054
+    httpOptions:
+      verify: false
+    tlsCACerts:
+      path: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/supplier.kindledger.com/ca/ca.supplier.kindledger.com-cert.pem
+    registrar:
+      - enrollId: admin
+        enrollSecret: adminpw
+    caName: ca.supplier.kindledger.com
+
+  ca.auditor.kindledger.com:
+    url: https://localhost:10054
+    httpOptions:
+      verify: false
+    tlsCACerts:
+      path: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/auditor.kindledger.com/ca/ca.auditor.kindledger.com-cert.pem
+    registrar:
+      - enrollId: admin
+        enrollSecret: adminpw
+    caName: ca.auditor.kindledger.com
+
+channels:
+  kindchannel:
+    orderers:
+      - orderer.kindledger.com
+    peers:
+      peer0.mb.kindledger.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+      peer0.charity.kindledger.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+      peer0.supplier.kindledger.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+      peer0.auditor.kindledger.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true

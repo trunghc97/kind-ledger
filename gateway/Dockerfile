@@ -6,11 +6,15 @@ RUN apt-get update && apt-get install -y maven wget && rm -rf /var/lib/apt/lists
 # Set working directory
 WORKDIR /app
 
+# Create Maven cache directory
+RUN mkdir -p /root/.m2
+
 # Copy pom.xml first for better caching
 COPY pom.xml .
 
 # Download dependencies (this layer will be cached if pom.xml doesn't change)
-RUN mvn dependency:go-offline -B
+# Use existing cache from volume if available
+RUN mvn dependency:go-offline -B || mvn dependency:resolve -B
 
 # Copy source code
 COPY src ./src

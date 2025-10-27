@@ -12,7 +12,7 @@ spring:
   
   # PostgreSQL Configuration
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/kindledger}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://kindledger-postgres:5432/kindledger}
     username: ${SPRING_DATASOURCE_USERNAME:kindledger}
     password: ${SPRING_DATASOURCE_PASSWORD:kindledger123}
     driver-class-name: org.postgresql.Driver
@@ -26,7 +26,7 @@ spring:
   # JPA Configuration
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:
@@ -39,12 +39,12 @@ spring:
   # MongoDB Configuration
   data:
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/kindledger}
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://kindledger-mongodb:27017/kindledger}
       auto-index-creation: true
   
   # Redis Configuration
   redis:
-    host: ${SPRING_REDIS_HOST:localhost}
+    host: ${SPRING_REDIS_HOST:redis}
     port: ${SPRING_REDIS_PORT:6379}
     password: ${SPRING_REDIS_PASSWORD:kindledger123}
     timeout: 2000ms

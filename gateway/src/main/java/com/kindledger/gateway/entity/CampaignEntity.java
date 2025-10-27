@@ -1,6 +1,6 @@
 package com.kindledger.gateway.entity;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -10,7 +10,8 @@ import java.util.List;
 public class CampaignEntity {
     
     @Id
-    @Column(name = "id")
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "id", columnDefinition = "uuid")
     private String id;
     
     @Column(name = "name", nullable = false, length = 500)

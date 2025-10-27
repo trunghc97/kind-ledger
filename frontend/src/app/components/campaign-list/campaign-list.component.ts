@@ -22,7 +22,7 @@ export class CampaignListComponent implements OnInit {
     this.error = null;
 
     this.campaignService.getAllCampaigns().subscribe({
-      next: (response) => {
+      next: (response: any) => {
         if (response.success) {
           this.campaigns = response.data;
         } else {
@@ -30,7 +30,7 @@ export class CampaignListComponent implements OnInit {
         }
         this.loading = false;
       },
-      error: (err) => {
+      error: (err: any) => {
         this.error = 'Không thể tải danh sách chiến dịch';
         this.loading = false;
         console.error('Error loading campaigns:', err);

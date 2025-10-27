@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CampaignService, Campaign } from '../services/campaign.service';
+import { CampaignService, Campaign } from '../../services/campaign.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -23,7 +23,7 @@ export class DashboardComponent implements OnInit {
     this.error = null;
 
     this.campaignService.getAllCampaigns().subscribe({
-      next: (response) => {
+      next: (response: any) => {
         if (response.success) {
           this.campaigns = response.data;
           this.calculateTotalDonations();
@@ -32,7 +32,7 @@ export class DashboardComponent implements OnInit {
         }
         this.loading = false;
       },
-      error: (err) => {
+      error: (err: any) => {
         this.error = 'Không thể tải dữ liệu từ blockchain';
         this.loading = false;
         console.error('Error loading dashboard:', err);
@@ -58,5 +58,9 @@ export class DashboardComponent implements OnInit {
 
   refresh(): void {
     this.loadDashboard();
+  }
+
+  getCompletedCampaignsCount(): number {
+    return this.campaigns.filter(c => c.status === 'COMPLETED').length;
   }
 }

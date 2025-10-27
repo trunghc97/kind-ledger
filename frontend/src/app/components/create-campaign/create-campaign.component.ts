@@ -54,7 +54,7 @@ export class CreateCampaignComponent implements OnInit {
       };
 
       this.campaignService.createCampaign(campaignData).subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.success) {
             this.success = true;
             this.loading = false;
@@ -66,7 +66,7 @@ export class CreateCampaignComponent implements OnInit {
             this.loading = false;
           }
         },
-        error: (err) => {
+        error: (err: any) => {
           this.error = 'Không thể tạo chiến dịch. Vui lòng thử lại.';
           this.loading = false;
           console.error('Error creating campaign:', err);

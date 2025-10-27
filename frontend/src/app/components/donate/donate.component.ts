@@ -40,14 +40,14 @@ export class DonateComponent implements OnInit {
 
   loadCampaign(): void {
     this.campaignService.getCampaign(this.campaignId).subscribe({
-      next: (response) => {
+      next: (response: any) => {
         if (response.success) {
           this.campaign = response.data;
         } else {
           this.error = response.message;
         }
       },
-      error: (err) => {
+      error: (err: any) => {
         this.error = 'Không thể tải thông tin chiến dịch';
         console.error('Error loading campaign:', err);
       }
@@ -68,7 +68,7 @@ export class DonateComponent implements OnInit {
       };
 
       this.campaignService.donate(donationData).subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.success) {
             this.success = true;
             this.loading = false;
@@ -82,7 +82,7 @@ export class DonateComponent implements OnInit {
             this.loading = false;
           }
         },
-        error: (err) => {
+        error: (err: any) => {
           this.error = 'Không thể xử lý quyên góp. Vui lòng thử lại.';
           this.loading = false;
           console.error('Error processing donation:', err);

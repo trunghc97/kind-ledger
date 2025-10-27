@@ -204,6 +204,19 @@ services:
       - fabric-net
     restart: "no"
 
+  # Fabric Tools Container for crypto generation and operations
+  fabric-tools:
+    image: hyperledger/fabric-tools:2.5
+    container_name: fabric-tools
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: sleep infinity
+    volumes:
+      - ./blockchain:/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain
+      - ./gateway/wallet:/opt/gopath/src/github.com/hyperledger/fabric/peer/wallet
+      - ./explorer/wallet:/opt/gopath/src/github.com/hyperledger/fabric/peer/explorer-wallet
+    networks:
+      - fabric-net
+
   # CLI Container for Fabric operations
   cli:
     image: hyperledger/fabric-tools:2.5
@@ -234,7 +247,7 @@ services:
       - POSTGRES_PASSWORD=kindledger123
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
       - ./database/init:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
@@ -256,7 +269,7 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=kindledger123
       - MONGO_INITDB_DATABASE=kindledger
     volumes:
-      - mongodb_data:/data/db
+      - ./data/mongo:/data/db
       - ./database/mongodb/init:/docker-entrypoint-initdb.d
     ports:
       - "27017:27017"
@@ -275,7 +288,7 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes --requirepass kindledger123
     volumes:
-      - redis_data:/data
+      - ./data/redis:/data
     ports:
       - "6379:6379"
     healthcheck:
@@ -308,7 +321,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/kindledger
       SPRING_DATASOURCE_USERNAME: kindledger
       SPRING_DATASOURCE_PASSWORD: kindledger123
-      SPRING_DATA_MONGODB_URI: mongodb://kindledger:kindledger123@mongodb:27017/kindledger
+      SPRING_DATA_MONGODB_URI: mongodb://kindledger:kindledger123@mongodb:27017/kindledger?authSource=admin
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
       SPRING_REDIS_PASSWORD: kindledger123
@@ -317,6 +330,7 @@ services:
       - ./blockchain/crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto
       - ./blockchain/config:/opt/gopath/src/github.com/hyperledger/fabric/peer/config
       - ./gateway/wallet:/opt/gopath/src/github.com/hyperledger/fabric/peer/wallet
+      - ./data/java:/root/.m2
     depends_on:
       - postgres
       - mongodb
@@ -346,6 +360,8 @@ services:
     restart: unless-stopped
     ports:
       - "4200:4200"
+    volumes:
+      - ./data/node_modules:/app/node_modules
     depends_on:
       - gateway
     healthcheck:
@@ -373,6 +389,7 @@ services:
       - ./blockchain/crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto
       - ./blockchain/config:/opt/gopath/src/github.com/hyperledger/fabric/peer/config
       - ./explorer/wallet:/opt/gopath/src/github.com/hyperledger/fabric/peer/wallet
+      - ./data/node_modules:/app/node_modules
     depends_on:
       - orderer
       - peer0.mb.kindledger.com
@@ -397,12 +414,6 @@ volumes:
   peer0_supplier_data:
     driver: local
   peer0_auditor_data:
-    driver: local
-  postgres_data:
-    driver: local
-  mongodb_data:
-    driver: local
-  redis_data:
     driver: local
 
 networks:
