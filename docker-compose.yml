@@ -256,6 +256,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "none"
     networks:
       - fabric-net
 
@@ -278,6 +280,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "none"
     networks:
       - fabric-net
 
@@ -296,6 +300,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "none"
     networks:
       - fabric-net
 
@@ -389,7 +395,7 @@ services:
       - ./blockchain/crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto
       - ./blockchain/config:/opt/gopath/src/github.com/hyperledger/fabric/peer/config
       - ./explorer/wallet:/opt/gopath/src/github.com/hyperledger/fabric/peer/wallet
-      - ./data/node_modules:/app/node_modules
+      # - ./data/node_modules_explorer:/app/node_modules  # Temporarily disabled
     depends_on:
       - orderer
       - peer0.mb.kindledger.com
