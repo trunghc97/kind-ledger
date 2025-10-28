@@ -10,8 +10,7 @@ import java.util.List;
 public class CampaignEntity {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "id", columnDefinition = "uuid")
+    @Column(name = "id", nullable = false, updatable = false, length = 36)
     private String id;
     
     @Column(name = "name", nullable = false, length = 500)
@@ -22,6 +21,10 @@ public class CampaignEntity {
     
     @Column(name = "owner", nullable = false)
     private String owner;
+
+    // ID do client/chain sử dụng trên API (không phải PK của bảng)
+    @Column(name = "chain_id", length = 120, unique = true)
+    private String chainId;
     
     @Column(name = "goal", nullable = false, precision = 15, scale = 2)
     private BigDecimal goal;
@@ -95,6 +98,14 @@ public class CampaignEntity {
     public void setOwner(String owner) {
         this.owner = owner;
     }
+
+    public String getChainId() {
+        return chainId;
+    }
+
+    public void setChainId(String chainId) {
+        this.chainId = chainId;
+    }
     
     public BigDecimal getGoal() {
         return goal;
@@ -160,12 +171,27 @@ public class CampaignEntity {
         this.donations = donations;
     }
     
+    @PrePersist
+    public void prePersist() {
+        if (this.id == null || this.id.isBlank()) {
+            this.id = java.util.UUID.randomUUID().toString();
+        }
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+        this.updatedAt = LocalDateTime.now();
+    }
+
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
     
     public enum CampaignStatus {
-        OPEN, COMPLETED, CANCELLED, EXPIRED
+        PENDING,
+        OPEN,
+        COMPLETED,
+        CANCELLED,
+        EXPIRED
     }
 }

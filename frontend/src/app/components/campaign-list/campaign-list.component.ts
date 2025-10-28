@@ -24,7 +24,21 @@ export class CampaignListComponent implements OnInit {
     this.campaignService.getAllCampaigns().subscribe({
       next: (response: any) => {
         if (response.success) {
-          this.campaigns = response.data;
+          // Merge pending campaigns from localStorage (chưa on-chain)
+          let merged = response.data || [];
+          try {
+            const pendingRaw = localStorage.getItem('pendingCampaigns');
+            const pending = pendingRaw ? JSON.parse(pendingRaw) : [];
+            // Loại bỏ pending đã có on-chain (id trùng)
+            const existingIds = new Set(merged.map((c: any) => c.id));
+            const pendingFiltered = pending.filter((p: any) => !existingIds.has(p.id));
+            // Đánh dấu pending để UI xử lý
+            pendingFiltered.forEach((p: any) => p.status = 'PENDING');
+            merged = [...pendingFiltered, ...merged];
+          } catch (e) {
+            console.warn('Không thể merge pendingCampaigns:', e);
+          }
+          this.campaigns = merged;
         } else {
           this.error = response.message;
         }

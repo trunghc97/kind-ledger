@@ -15,6 +15,14 @@ export interface Campaign {
   donors: Donor[];
 }
 
+// Payload khi tạo mới campaign: chỉ gửi các trường do client nhập
+export interface CreateCampaignRequest {
+  name: string;
+  description: string;
+  owner: string;
+  goal: number;
+}
+
 export interface Donor {
   id: string;
   name: string;
@@ -51,8 +59,8 @@ export class CampaignService {
     return this.http.get<ApiResponse<Campaign>>(`${this.apiUrl}/campaigns/${id}`);
   }
 
-  createCampaign(campaign: Campaign): Observable<ApiResponse<Campaign>> {
-    return this.http.post<ApiResponse<Campaign>>(`${this.apiUrl}/campaigns`, campaign);
+  createCampaign(payload: CreateCampaignRequest): Observable<ApiResponse<Campaign>> {
+    return this.http.post<ApiResponse<Campaign>>(`${this.apiUrl}/campaigns`, payload);
   }
 
   donate(donation: DonationRequest): Observable<ApiResponse<Campaign>> {

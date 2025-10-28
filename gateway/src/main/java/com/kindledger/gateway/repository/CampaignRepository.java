@@ -18,6 +18,8 @@ public interface CampaignRepository extends JpaRepository<CampaignEntity, String
     List<CampaignEntity> findByOwner(String owner);
     
     List<CampaignEntity> findByStatusAndOwner(CampaignEntity.CampaignStatus status, String owner);
+
+    Optional<CampaignEntity> findByChainId(String chainId);
     
     @Query("SELECT c FROM CampaignEntity c WHERE c.name LIKE %:keyword% OR c.description LIKE %:keyword%")
     List<CampaignEntity> findByKeyword(@Param("keyword") String keyword);

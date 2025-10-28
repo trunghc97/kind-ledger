@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { CampaignService, Campaign } from '../../services/campaign.service';
+import { CampaignService, CreateCampaignRequest } from '../../services/campaign.service';
 
 @Component({
   selector: 'app-create-campaign',
@@ -20,7 +20,6 @@ export class CreateCampaignComponent implements OnInit {
     private router: Router
   ) {
     this.campaignForm = this.fb.group({
-      id: ['', [Validators.required, Validators.minLength(3)]],
       name: ['', [Validators.required, Validators.minLength(5)]],
       description: ['', [Validators.required, Validators.minLength(10)]],
       owner: ['', [Validators.required, Validators.minLength(3)]],
@@ -28,11 +27,7 @@ export class CreateCampaignComponent implements OnInit {
     });
   }
 
-  ngOnInit(): void {
-    // Generate a default campaign ID
-    const campaignId = 'campaign-' + Date.now();
-    this.campaignForm.patchValue({ id: campaignId });
-  }
+  ngOnInit(): void {}
 
   onSubmit(): void {
     if (this.campaignForm.valid) {
@@ -40,17 +35,11 @@ export class CreateCampaignComponent implements OnInit {
       this.error = null;
       this.success = false;
 
-      const campaignData: Campaign = {
-        id: this.campaignForm.value.id,
+      const campaignData: CreateCampaignRequest = {
         name: this.campaignForm.value.name,
         description: this.campaignForm.value.description,
         owner: this.campaignForm.value.owner,
-        goal: this.campaignForm.value.goal,
-        raised: 0,
-        status: 'OPEN',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        donors: []
+        goal: Number(this.campaignForm.value.goal)
       };
 
       this.campaignService.createCampaign(campaignData).subscribe({
@@ -58,9 +47,41 @@ export class CreateCampaignComponent implements OnInit {
           if (response.success) {
             this.success = true;
             this.loading = false;
+
+            // Nếu blockchain chưa sẵn sàng, đánh dấu campaign ở trạng thái pending và quay về danh sách
+            const isBlockchainUnavailable = !!response.warning || response.message?.toString().toLowerCase().includes('blockchain');
+            if (isBlockchainUnavailable) {
+              try {
+                const pendingStoreKey = 'pendingCampaigns';
+                const existingRaw = localStorage.getItem(pendingStoreKey);
+                const existing = existingRaw ? JSON.parse(existingRaw) : [];
+                const now = new Date().toISOString();
+              const pendingItem = {
+                id: response.data?.id,
+                  name: response.data?.name || campaignData.name,
+                  description: response.data?.description || campaignData.description,
+                  owner: response.data?.owner || campaignData.owner,
+                  goal: Number(response.data?.goal ?? campaignData.goal),
+                  raised: Number(response.data?.raised ?? 0),
+                  status: 'PENDING',
+                  createdAt: now,
+                  updatedAt: now,
+                  donors: []
+                };
+                const merged = [pendingItem, ...existing.filter((c: any) => c.id !== pendingItem.id)];
+                localStorage.setItem(pendingStoreKey, JSON.stringify(merged));
+              } catch (e) {
+                console.warn('Không thể lưu pendingCampaigns:', e);
+              }
+              // Điều hướng về màn danh sách
+              this.router.navigate(['/campaigns']);
+              return;
+            }
+
+            // Nếu tạo thành công trên blockchain, điều hướng vào chi tiết
             setTimeout(() => {
               this.router.navigate(['/campaigns', response.data.id]);
-            }, 2000);
+            }, 1200);
           } else {
             this.error = response.message;
             this.loading = false;

@@ -1,7 +1,9 @@
 package com.kindledger.gateway.controller;
 
+import com.kindledger.gateway.entity.CampaignEntity;
 import com.kindledger.gateway.model.Campaign;
 import com.kindledger.gateway.model.DonationRequest;
+import com.kindledger.gateway.repository.CampaignRepository;
 import com.kindledger.gateway.service.FabricService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +25,9 @@ public class CampaignController {
     @Autowired
     private FabricService fabricService;
     
+    @Autowired
+    private CampaignRepository campaignRepository;
+    
     @PostMapping("/campaigns")
     public ResponseEntity<Map<String, Object>> createCampaign(@RequestBody(required = false) Campaign campaign) {
         try {
@@ -37,8 +42,11 @@ public class CampaignController {
             if (campaign.getName() == null || campaign.getName().trim().isEmpty()) {
                 return createErrorResponse("Campaign name is required");
             }
+            // Auto-generate ID if missing
             if (campaign.getId() == null || campaign.getId().trim().isEmpty()) {
-                return createErrorResponse("Campaign ID is required");
+                String genId = "campaign-" + System.currentTimeMillis();
+                campaign.setId(genId);
+                logger.info("Generated campaign ID: {}", genId);
             }
             if (campaign.getGoal() == null || campaign.getGoal() <= 0) {
                 return createErrorResponse("Valid campaign goal is required");
@@ -62,18 +70,33 @@ public class CampaignController {
                 return ResponseEntity.ok(response);
             } catch (RuntimeException e) {
                 logger.warn("Blockchain operation failed: {}", e.getMessage());
-                // Return success even if blockchain fails (graceful degradation)
+                // Graceful degradation: mark campaign as PENDING in backend storage (if any) and return success
                 // Ensure raised is initialized
                 if (campaign.getRaised() == null) {
                     campaign.setRaised(0.0);
                 }
-                if (campaign.getStatus() == null) {
-                    campaign.setStatus("OPEN");
+                // Set status to PENDING to indicate waiting for blockchain commit
+                campaign.setStatus("PENDING");
+                // Persist PENDING campaign to database
+                try {
+                    CampaignEntity entity = new CampaignEntity(
+                        null,
+                        campaign.getName(),
+                        campaign.getDescription() != null ? campaign.getDescription() : "",
+                        campaign.getOwner() != null ? campaign.getOwner() : "",
+                        java.math.BigDecimal.valueOf(campaign.getGoal())
+                    );
+                    entity.setChainId(campaign.getId());
+                    entity.setStatus(CampaignEntity.CampaignStatus.PENDING);
+                    entity.setRaised(java.math.BigDecimal.ZERO);
+                    campaignRepository.save(entity);
+                } catch (Exception persistEx) {
+                    logger.warn("Failed to persist pending campaign {}: {}", campaign.getId(), persistEx.getMessage());
                 }
                 
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", true);
-                response.put("message", "Campaign data received but blockchain is not available");
+                response.put("message", "Campaign is pending blockchain confirmation");
                 response.put("warning", "Blockchain operation failed: " + e.getMessage());
                 response.put("data", campaign);
                 
@@ -148,6 +171,21 @@ public class CampaignController {
             Campaign campaign = fabricService.queryCampaign(id);
             
             if (campaign == null) {
+                // Fallback: try from DB by chainId when blockchain unavailable
+                try {
+                    java.util.Optional<CampaignEntity> pendingOpt = campaignRepository.findByChainId(id);
+                    if (pendingOpt.isPresent()) {
+                        Campaign mapped = mapEntityToModel(pendingOpt.get());
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("success", true);
+                        response.put("message", "Campaign retrieved from backend store (pending blockchain)");
+                        response.put("data", mapped);
+                        response.put("warning", "Blockchain not available, returning pending data");
+                        return ResponseEntity.ok(response);
+                    }
+                } catch (Exception dbEx) {
+                    logger.warn("DB fallback failed for campaign {}: {}", id, dbEx.getMessage());
+                }
                 return createErrorResponse("Campaign not found");
             }
             
@@ -171,6 +209,26 @@ public class CampaignController {
             
             // Use FabricService to get all campaigns
             List<Campaign> campaignsData = fabricService.queryAllCampaigns();
+            if (campaignsData == null) {
+                campaignsData = new java.util.ArrayList<>();
+            }
+            // Merge PENDING campaigns from DB
+            try {
+                List<CampaignEntity> pendingEntities = campaignRepository.findByStatus(CampaignEntity.CampaignStatus.PENDING);
+                java.util.Set<String> existingIds = new java.util.HashSet<>();
+                for (Campaign c : campaignsData) {
+                    if (c.getId() != null) existingIds.add(c.getId());
+                }
+                for (CampaignEntity entity : pendingEntities) {
+                    // map by chainId vào ID API
+                    Campaign mapped = mapEntityToModel(entity);
+                    if (mapped.getId() != null && !existingIds.contains(mapped.getId())) {
+                        campaignsData.add(mapped);
+                    }
+                }
+            } catch (Exception mergeEx) {
+                logger.warn("Failed merging pending campaigns: {}", mergeEx.getMessage());
+            }
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -242,5 +300,18 @@ public class CampaignController {
         response.put("success", false);
         response.put("message", message);
         return ResponseEntity.badRequest().body(response);
+    }
+
+    private Campaign mapEntityToModel(CampaignEntity entity) {
+        Campaign c = new Campaign();
+        c.setId(entity.getChainId() != null ? entity.getChainId() : entity.getId());
+        c.setName(entity.getName());
+        c.setDescription(entity.getDescription());
+        c.setOwner(entity.getOwner());
+        c.setGoal(entity.getGoal() != null ? entity.getGoal().doubleValue() : 0.0);
+        c.setRaised(entity.getRaised() != null ? entity.getRaised().doubleValue() : 0.0);
+        c.setStatus(entity.getStatus() != null ? entity.getStatus().name() : "PENDING");
+        // createdAt/updatedAt may be null; API tolerates nulls
+        return c;
     }
 }
