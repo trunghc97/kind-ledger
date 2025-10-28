@@ -44,6 +44,12 @@
 - **Fabric Orderer**: localhost:7050
 - **Health Check**: http://localhost:8080/api/health
 
+### 📝 **Tài liệu Testing:**
+- **Testing Guide**: Xem file `documents/testing-guide.md` để biết chi tiết về testing API Gateway
+- **Test Script**: `test_gateway_api.py` - 28 test cases với 100% pass rate
+- **Test Coverage**: Authentication, Campaigns, Donations, Validation, Security, Edge cases
+- **Run Tests**: `bash test-api.sh` hoặc `python3 test_gateway_api.py`
+
 ---
 
 ## 2) Bài toán & Mục tiêu
