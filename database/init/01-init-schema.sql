@@ -80,6 +80,20 @@ CREATE TABLE IF NOT EXISTS transactions (
     FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE SET NULL
 );
 
+-- Token transactions (for deposit/mint tracking)
+CREATE TABLE IF NOT EXISTS token_transactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tx_ref VARCHAR(120) UNIQUE NOT NULL,
+    wallet_address VARCHAR(255) NOT NULL,
+    amount DECIMAL(18,6) NOT NULL,
+    bank_ref VARCHAR(120),
+    token_hash VARCHAR(120) UNIQUE,
+    blockchain_tx_id VARCHAR(120),
+    block_hash VARCHAR(180),
+    status VARCHAR(40) NOT NULL DEFAULT 'SUCCESS',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status);
 CREATE INDEX IF NOT EXISTS idx_campaigns_owner ON campaigns(owner);

@@ -23,8 +23,8 @@ services:
     command: orderer
     volumes:
       - ./blockchain/artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
-      - ./blockchain/crypto-config/ordererOrganizations/kindledger.com/orderers/orderer.kindledger.com/msp:/var/hyperledger/orderer/msp
-      - ./blockchain/crypto-config/ordererOrganizations/kindledger.com/orderers/orderer.kindledger.com/tls/:/var/hyperledger/orderer/tls
+      - ./blockchain/crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/msp:/var/hyperledger/orderer/msp
+      - ./blockchain/crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/tls/:/var/hyperledger/orderer/tls
       - orderer_data:/var/hyperledger/production/orderer
     ports:
       - "7050:7050"
@@ -56,6 +56,7 @@ services:
       - CORE_PEER_LOCALMSPID=MBBankMSP
     volumes:
       - /var/run/:/host/var/run/
+      - /var/run/docker.sock:/host/var/run/docker.sock
       - ./blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/msp:/etc/hyperledger/fabric/msp
       - ./blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls:/etc/hyperledger/fabric/tls
       - peer0_mb_data:/var/hyperledger/production
@@ -93,6 +94,7 @@ services:
       - CORE_PEER_LOCALMSPID=CharityMSP
     volumes:
       - /var/run/:/host/var/run/
+      - /var/run/docker.sock:/host/var/run/docker.sock
       - ./blockchain/crypto-config/peerOrganizations/charity.kindledger.com/peers/peer0.charity.kindledger.com/msp:/etc/hyperledger/fabric/msp
       - ./blockchain/crypto-config/peerOrganizations/charity.kindledger.com/peers/peer0.charity.kindledger.com/tls:/etc/hyperledger/fabric/tls
       - peer0_charity_data:/var/hyperledger/production
@@ -130,6 +132,7 @@ services:
       - CORE_PEER_LOCALMSPID=SupplierMSP
     volumes:
       - /var/run/:/host/var/run/
+      - /var/run/docker.sock:/host/var/run/docker.sock
       - ./blockchain/crypto-config/peerOrganizations/supplier.kindledger.com/peers/peer0.supplier.kindledger.com/msp:/etc/hyperledger/fabric/msp
       - ./blockchain/crypto-config/peerOrganizations/supplier.kindledger.com/peers/peer0.supplier.kindledger.com/tls:/etc/hyperledger/fabric/tls
       - peer0_supplier_data:/var/hyperledger/production
@@ -167,6 +170,7 @@ services:
       - CORE_PEER_LOCALMSPID=AuditorMSP
     volumes:
       - /var/run/:/host/var/run/
+      - /var/run/docker.sock:/host/var/run/docker.sock
       - ./blockchain/crypto-config/peerOrganizations/auditor.kindledger.com/peers/peer0.auditor.kindledger.com/msp:/etc/hyperledger/fabric/msp
       - ./blockchain/crypto-config/peerOrganizations/auditor.kindledger.com/peers/peer0.auditor.kindledger.com/tls:/etc/hyperledger/fabric/tls
       - peer0_auditor_data:/var/hyperledger/production

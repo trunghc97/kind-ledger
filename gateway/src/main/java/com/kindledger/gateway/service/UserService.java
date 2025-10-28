@@ -1,118 +1,80 @@
 package com.kindledger.gateway.service;
 
+import com.kindledger.gateway.entity.UserEntity;
 import com.kindledger.gateway.model.User;
+import com.kindledger.gateway.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Service
 public class UserService {
-    
-    private List<User> users;
-    private DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
-    public UserService() {
-        this.users = new ArrayList<>();
-        initializeDefaultUsers();
-    }
+    @Autowired
+    private UserRepository userRepository;
 
-    private void initializeDefaultUsers() {
-        User admin = new User();
-        admin.setId("user-001");
-        admin.setUsername("admin");
-        admin.setEmail("admin@kindledger.com");
-        admin.setPassword("$2a$10$dummy"); // In production, use BCrypt
-        admin.setFullName("Administrator");
-        admin.setRole("ADMIN");
-        admin.setStatus("ACTIVE");
-        admin.setCreatedAt(LocalDateTime.now().minusMonths(1).format(formatter));
-        admin.setUpdatedAt(LocalDateTime.now().format(formatter));
-        users.add(admin);
-
-        User normalUser = new User();
-        normalUser.setId("user-002");
-        normalUser.setUsername("user");
-        normalUser.setEmail("user@kindledger.com");
-        normalUser.setPassword("$2a$10$dummy"); // In production, use BCrypt
-        normalUser.setFullName("Normal User");
-        normalUser.setRole("USER");
-        normalUser.setStatus("ACTIVE");
-        normalUser.setCreatedAt(LocalDateTime.now().minusWeeks(2).format(formatter));
-        normalUser.setUpdatedAt(LocalDateTime.now().format(formatter));
-        users.add(normalUser);
-    }
+    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     public User register(String username, String email, String password, String fullName) {
-        // Check if username or email already exists
-        if (findByUsername(username).isPresent()) {
+        if (userRepository.existsByUsername(username)) {
             throw new RuntimeException("Username already exists");
         }
-        if (findByEmail(email).isPresent()) {
+        if (userRepository.existsByEmail(email)) {
             throw new RuntimeException("Email already exists");
         }
 
-        // Create new user
+        UserEntity entity = new UserEntity();
+        entity.setUsername(username);
+        entity.setEmail(email);
+        entity.setPasswordHash(password); // TODO: hash with BCrypt in production
+        entity.setFullName(fullName);
+        entity.setRole(UserEntity.UserRole.USER);
+        entity.setStatus(UserEntity.UserStatus.ACTIVE);
+        entity.setCreatedAt(LocalDateTime.now());
+        entity.setUpdatedAt(LocalDateTime.now());
+
+        UserEntity saved = userRepository.save(entity);
+
         User user = new User();
-        user.setId("user-" + UUID.randomUUID().toString());
-        user.setUsername(username);
-        user.setEmail(email);
-        user.setPassword(password); // In production, hash this with BCrypt
-        user.setFullName(fullName);
-        user.setRole("USER");
-        user.setStatus("ACTIVE");
-        user.setCreatedAt(LocalDateTime.now().format(formatter));
-        user.setUpdatedAt(LocalDateTime.now().format(formatter));
-        
-        users.add(user);
+        user.setId("user-" + saved.getId().toString());
+        user.setUsername(saved.getUsername());
+        user.setEmail(saved.getEmail());
+        user.setFullName(saved.getFullName());
+        user.setRole(saved.getRole().name());
+        user.setStatus(saved.getStatus().name());
+        user.setCreatedAt(saved.getCreatedAt().format(formatter));
+        user.setUpdatedAt(saved.getUpdatedAt().format(formatter));
         return user;
     }
 
     public User login(String username, String password) {
-        Optional<User> userOpt = findByUsername(username);
-        
+        Optional<UserEntity> userOpt = userRepository.findByUsername(username);
         if (userOpt.isEmpty()) {
             throw new RuntimeException("Invalid username or password");
         }
-
-        User user = userOpt.get();
-        
-        // In production, use BCrypt to check password
-        if (!user.getPassword().equals(password)) {
+        UserEntity entity = userOpt.get();
+        if (!entity.getPasswordHash().equals(password)) {
             throw new RuntimeException("Invalid username or password");
         }
-
-        if (!"ACTIVE".equals(user.getStatus())) {
+        if (!UserEntity.UserStatus.ACTIVE.equals(entity.getStatus())) {
             throw new RuntimeException("Account is not active");
         }
+        entity.setLastLogin(LocalDateTime.now());
+        userRepository.save(entity);
 
+        User user = new User();
+        user.setId("user-" + entity.getId().toString());
+        user.setUsername(entity.getUsername());
+        user.setEmail(entity.getEmail());
+        user.setFullName(entity.getFullName());
+        user.setRole(entity.getRole().name());
+        user.setStatus(entity.getStatus().name());
+        user.setCreatedAt(entity.getCreatedAt() != null ? entity.getCreatedAt().format(formatter) : null);
+        user.setUpdatedAt(entity.getUpdatedAt() != null ? entity.getUpdatedAt().format(formatter) : null);
         return user;
     }
-
-    public Optional<User> findByUsername(String username) {
-        return users.stream()
-                .filter(u -> u.getUsername().equals(username))
-                .findFirst();
-    }
-
-    public Optional<User> findByEmail(String email) {
-        return users.stream()
-                .filter(u -> u.getEmail().equals(email))
-                .findFirst();
-    }
-
-    public Optional<User> findById(String id) {
-        return users.stream()
-                .filter(u -> u.getId().equals(id))
-                .findFirst();
-    }
-
-    public List<User> getAllUsers() {
-        return new ArrayList<>(users);
-    }
 }
-

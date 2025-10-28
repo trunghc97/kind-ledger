@@ -241,6 +241,92 @@ init_database() {
     docker-compose down
 }
 
+# 9. Tạo channel kindchannel và join peers (dùng peer CLI trong fabric-tools)
+create_channel_and_join() {
+    echo -e "${YELLOW}🧩 Tạo channel kindchannel và join peer MBBank...${NC}"
+
+    # Đảm bảo core services đang chạy
+    docker-compose up -d orderer peer0.mb.kindledger.com peer0.charity.kindledger.com peer0.supplier.kindledger.com peer0.auditor.kindledger.com fabric-tools
+
+    # Đường dẫn cert
+    ORDERER_TLS_CA=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/ordererOrganizations/orderer.kindledger.com/msp/tlscacerts/tlsca.orderer.kindledger.com-cert.pem
+    MB_PEER_TLS_CA=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt
+
+    # Hàm wrapper chạy peer trong fabric-tools
+    run_peer() {
+      docker exec -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
+        -e CORE_PEER_LOCALMSPID=MBBankMSP \
+        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp \
+        -e CORE_PEER_ADDRESS=peer0.mb.kindledger.com:7051 \
+        -e CORE_PEER_TLS_ENABLED=true \
+        -e CORE_PEER_TLS_ROOTCERT_FILE=$MB_PEER_TLS_CA \
+        fabric-tools bash -lc "$1"
+    }
+
+    # Tạo channel block nếu chưa có
+    echo -e "${YELLOW}📺 Tạo channel block...${NC}"
+    run_peer "peer channel create -o orderer.kindledger.com:7050 -c kindchannel -f /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/artifacts/kindchannel.tx --tls --cafile $ORDERER_TLS_CA -o orderer.kindledger.com:7050 || true"
+
+    # Join channel
+    echo -e "${YELLOW}🔗 Peer MBBank join channel...${NC}"
+    run_peer "peer channel join -b kindchannel.block || peer channel join -b ./kindchannel.block || true"
+
+    # Cập nhật anchor (tùy chọn, không fail pipeline)
+    echo -e "${YELLOW}📌 Cập nhật anchor peer (tuỳ chọn)...${NC}"
+    run_peer "peer channel update -o orderer.kindledger.com:7050 --channelID kindchannel --tls --cafile $ORDERER_TLS_CA -f /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/artifacts/MBBankMSPanchors.tx || true"
+
+    echo -e "${GREEN}✅ Channel kindchannel sẵn sàng (đã join peer MBBank)${NC}"
+}
+
+# 10. Triển khai chaincode cvnd-token (nếu chưa commit)
+deploy_chaincode_cvnd_token() {
+    echo -e "${YELLOW}📦 Triển khai chaincode cvnd-token...${NC}"
+
+    CHAINCODE_NAME=cvnd-token
+    CHAINCODE_LABEL=cvnd-token_1
+    CC_SRC=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/chaincode/cvnd-token
+    ORDERER_TLS_CA=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/ordererOrganizations/orderer.kindledger.com/msp/tlscacerts/tlsca.orderer.kindledger.com-cert.pem
+    MB_PEER_TLS_CA=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt
+
+    run_peer() {
+      docker exec -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
+        -e CORE_PEER_LOCALMSPID=MBBankMSP \
+        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp \
+        -e CORE_PEER_ADDRESS=peer0.mb.kindledger.com:7051 \
+        -e CORE_PEER_TLS_ENABLED=true \
+        -e CORE_PEER_TLS_ROOTCERT_FILE=$MB_PEER_TLS_CA \
+        fabric-tools bash -lc "$1"
+    }
+
+    # Kiểm tra đã commit chưa
+    if run_peer "peer lifecycle chaincode querycommitted --channelID kindchannel | grep -q '$CHAINCODE_NAME'"; then
+      echo -e "${GREEN}✅ Chaincode $CHAINCODE_NAME đã commit${NC}"
+      return 0
+    fi
+
+    # Package nếu có source
+    if run_peer "[ -d $CC_SRC ]"; then
+      echo -e "${YELLOW}📦 Package chaincode...${NC}"
+      run_peer "rm -f ${CHAINCODE_LABEL}.tar.gz; peer lifecycle chaincode package ${CHAINCODE_LABEL}.tar.gz --path $CC_SRC --lang golang --label ${CHAINCODE_LABEL} || true"
+
+      echo -e "${YELLOW}⬆️  Install chaincode...${NC}"
+      run_peer "peer lifecycle chaincode install ${CHAINCODE_LABEL}.tar.gz || true"
+
+      PKG_ID=$(run_peer "peer lifecycle chaincode queryinstalled | grep ${CHAINCODE_LABEL} | sed -n 's/Package ID: \(.*\), Label:.*/\1/p'" | tr -d '\r')
+      echo -e "${YELLOW}📦 Package ID: ${PKG_ID}${NC}"
+
+      echo -e "${YELLOW}✅ Approve for MBBank...${NC}"
+      run_peer "peer lifecycle chaincode approveformyorg --channelID kindchannel --name ${CHAINCODE_NAME} --version 1 --sequence 1 --package-id ${PKG_ID} --tls --cafile $ORDERER_TLS_CA --orderer orderer.kindledger.com:7050 || true"
+
+      echo -e "${YELLOW}🧾 Commit chaincode...${NC}"
+      run_peer "peer lifecycle chaincode commit --channelID kindchannel --name ${CHAINCODE_NAME} --version 1 --sequence 1 --tls --cafile $ORDERER_TLS_CA --orderer orderer.kindledger.com:7050 --peerAddresses peer0.mb.kindledger.com:7051 --tlsRootCertFiles $MB_PEER_TLS_CA || true"
+    else
+      echo -e "${YELLOW}⚠️  Không tìm thấy source chaincode tại $CC_SRC, bỏ qua bước package/install. Giả định chaincode đã có sẵn.${NC}"
+    fi
+
+    run_peer "peer lifecycle chaincode querycommitted --channelID kindchannel"
+}
+
 # Main execution
 main() {
     cleanup_old_files
