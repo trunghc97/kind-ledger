@@ -1,12 +1,13 @@
 package main
 
 import (
-	"kindledgercc/chaincode"
+	"kindledgercc/contracts"
+
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
 func main() {
-	cc, err := contractapi.NewChaincode(new(chaincode.KindLedgerContract))
+	cc, err := contractapi.NewChaincode(new(contracts.KindLedgerContract))
 	if err != nil {
 		panic(err)
 	}

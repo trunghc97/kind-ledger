@@ -249,7 +249,7 @@ create_channel_and_join() {
     docker-compose up -d orderer peer0.mb.kindledger.com peer0.charity.kindledger.com peer0.supplier.kindledger.com peer0.auditor.kindledger.com fabric-tools
 
     # Đường dẫn cert
-    ORDERER_TLS_CA=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/ordererOrganizations/orderer.kindledger.com/msp/tlscacerts/tlsca.orderer.kindledger.com-cert.pem
+    ORDERER_TLS_CA=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/tls/ca.crt
     MB_PEER_TLS_CA=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt
 
     # Hàm wrapper chạy peer trong fabric-tools
@@ -265,7 +265,7 @@ create_channel_and_join() {
 
     # Tạo channel block nếu chưa có
     echo -e "${YELLOW}📺 Tạo channel block...${NC}"
-    run_peer "peer channel create -o orderer.kindledger.com:7050 -c kindchannel -f /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/artifacts/kindchannel.tx --tls --cafile $ORDERER_TLS_CA -o orderer.kindledger.com:7050 || true"
+    run_peer "peer channel create -o orderer.kindledger.com:7050 --ordererTLSHostnameOverride orderer.orderer.kindledger.com -c kindchannel -f /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/artifacts/kindchannel.tx --tls --cafile $ORDERER_TLS_CA -o orderer.kindledger.com:7050 || true"
 
     # Join channel
     echo -e "${YELLOW}🔗 Peer MBBank join channel...${NC}"
@@ -273,7 +273,7 @@ create_channel_and_join() {
 
     # Cập nhật anchor (tùy chọn, không fail pipeline)
     echo -e "${YELLOW}📌 Cập nhật anchor peer (tuỳ chọn)...${NC}"
-    run_peer "peer channel update -o orderer.kindledger.com:7050 --channelID kindchannel --tls --cafile $ORDERER_TLS_CA -f /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/artifacts/MBBankMSPanchors.tx || true"
+    run_peer "peer channel update -o orderer.kindledger.com:7050 --ordererTLSHostnameOverride orderer.orderer.kindledger.com --channelID kindchannel --tls --cafile $ORDERER_TLS_CA -f /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/artifacts/MBBankMSPanchors.tx || true"
 
     echo -e "${GREEN}✅ Channel kindchannel sẵn sàng (đã join peer MBBank)${NC}"
 }

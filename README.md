@@ -323,6 +323,161 @@ docker-compose logs -f explorer
 - Số lượng giao dịch
 - Trạng thái mạng blockchain
 
+## 🧰 Scripts Blockchain: chạy khi nào?
+
+Các script nằm tại `blockchain/scripts/`. Trừ khi ghi chú khác, hãy chạy từ thư mục gốc repo (`kind-ledger/`) hoặc `cd blockchain/scripts` trước khi chạy để đường dẫn tương đối khớp. Đảm bảo Docker/Compose hoạt động và các images/phụ thuộc đã sẵn sàng.
+
+### 1) generate.sh — Khởi tạo artifacts và crypto material
+
+- Khi nào chạy: Lần đầu chuẩn bị mạng, hoặc khi thay đổi cấu hình mạng (MSP, orgs, policies) và cần tạo lại `crypto-config`, `genesis.block`, `kindchannel.tx`, `*MSPanchors.tx`.
+- Không nên chạy: Khi mạng đang hoạt động ổn định và không thay đổi topology.
+- Ví dụ:
+```bash
+cd blockchain/scripts
+./generate.sh
+```
+
+### 2) network.sh — Quản vòng đời mạng Fabric (dev helper)
+
+- Khi nào chạy: Để khởi động nhanh môi trường Fabric local cho dev/test, hoặc dừng/xoá khi cần làm sạch.
+- Lệnh thường dùng:
+  - `./network.sh up` — Khởi động network (orderer, peers, CA, DB... tuỳ cấu hình)
+  - `./network.sh down` — Dừng và xoá containers/volumes liên quan
+  - `./network.sh restart` — Dừng rồi khởi động lại
+- Ví dụ:
+```bash
+cd blockchain/scripts
+./network.sh up
+```
+
+### 3) create_channel.sh — Tạo channel, peer join, cập nhật anchor peers
+
+- Khi nào chạy: Sau khi network đã chạy (`network.sh up`) và artifacts đã được sinh (`generate.sh`), để tạo channel (ví dụ `kindchannel`), cho peers join và cập nhật anchor peers.
+- Ví dụ:
+```bash
+cd blockchain/scripts
+./create_channel.sh
+```
+
+### 4) deploy_chaincode.sh — Triển khai smart contract chính (`kindledgercc`)
+
+- Khi nào chạy: Lần đầu deploy chaincode trên channel, hoặc khi nâng cấp version/sequence.
+- Yêu cầu trước: Channel đã tồn tại và các peer mục tiêu đã join.
+- Ghi chú: Script có thể hỗ trợ tham số tên chaincode, version, sequence. Xem header script để biết tuỳ chọn cụ thể.
+- Ví dụ:
+```bash
+cd blockchain/scripts
+./deploy_chaincode.sh
+```
+
+### 5) deploy_cvnd_token.sh — Triển khai chaincode token (`cvnd-token`)
+
+- Khi nào chạy: Khi cần triển khai contract token riêng phục vụ phát hành/quản lý token (vai trò MBBank).
+- Yêu cầu trước: Channel đã sẵn sàng; có thể chạy sau chaincode chính hoặc độc lập tuỳ workflow.
+- Ví dụ:
+```bash
+cd blockchain/scripts
+./deploy_cvnd_token.sh
+```
+
+### 6) query_chaincode.sh — Smoke-test invoke/query
+
+- Khi nào chạy: Sau khi commit chaincode để kiểm thử nhanh các hàm query/invoke.
+- Yêu cầu trước: Chaincode đã commit; peers đã join và anchor đúng.
+- Ví dụ:
+```bash
+cd blockchain/scripts
+./query_chaincode.sh
+```
+
+### Thứ tự khuyến nghị cho lần đầu (fresh setup)
+
+1. `generate.sh`
+2. `network.sh up`
+3. `create_channel.sh`
+4. `deploy_chaincode.sh`
+5. (Tuỳ chọn) `deploy_cvnd_token.sh`
+6. `query_chaincode.sh` (smoke-test)
+
+### Lưu ý
+
+- Theo dõi lỗi qua logs: `docker-compose logs -f orderer` và `docker-compose logs -f peer0.mb.kindledger.com` (hoặc các peer khác).
+- Nếu thay đổi cấu hình mạng, hãy dừng mạng (`network.sh down`), chạy lại `generate.sh`, rồi khởi động lại (`network.sh up`).
+- Trong CI/CD, nên ghim version và sequence của chaincode, truyền qua tham số script để đảm bảo reproducibility.
+
+### Cách chạy thực tế (cập nhật 2025-10-28)
+
+⚠️ **Lưu ý**: Hiện tại đang xử lý các vấn đề TLS/DNS giữa containers. Dưới đây là cách chạy **tạm thời** cho đến khi fix hoàn tất.
+
+#### Bước 1: Generate artifacts và khởi động network
+
+```bash
+cd /Users/hct97/Documents/Projects/kind-ledger
+
+# Tạo crypto materials và genesis block
+docker run --rm \
+  -v "$PWD":/workspace -w /workspace \
+  -e FABRIC_CFG_PATH=/workspace/blockchain/config \
+  hyperledger/fabric-tools:2.5 \
+  bash -c "ln -sfn ../crypto-config /workspace/blockchain/config/crypto-config && ./blockchain/scripts/generate.sh"
+
+# Khởi động network
+cd blockchain/scripts
+./network.sh up
+
+# Khởi động lại services để reset DNS
+cd ../..
+docker-compose restart orderer fabric-tools cli
+sleep 5
+```
+
+#### Bước 2: Tạo channel (đang fix TLS)
+
+```bash
+cd /Users/hct97/Documents/Projects/kind-ledger
+./blockchain/scripts/create_channel.sh
+```
+
+**Lỗi hiện tại**: 
+- ❌ `connection refused` từ orderer
+- ❌ TLS handshake failed giữa fabric-tools và peers (x509 unknown authority)
+
+**Nguyên nhân đang điều tra**:
+1. Orderer chưa lắng nghe đúng endpoint/port
+2. Mount TLS certificates chưa đúng trong docker-compose
+3. DNS resolution (`orderer`, `orderer.kindledger.com`) trong network chưa ổn định
+
+#### Bước 3: Deploy chaincode (đang pending fix TLS)
+
+```bash
+cd blockchain/scripts
+./deploy_chaincode.sh
+./deploy_cvnd_token.sh
+```
+
+#### TODO cho ngày mai
+
+1. **Kiểm tra TLS certificates**:
+   - Xác minh file `.../orderer.orderer.kindledger.com/tls/ca.crt` tồn tại
+   - Xác minh mount trong `docker-compose.yml` đúng
+   - Thử dùng tham số `--cafile /etc/hyperledger/fabric/orderer-tls/ca.crt`
+
+2. **Kiểm tra orderer đang lắng nghe**:
+   ```bash
+   docker logs orderer.kindledger.com | grep "listen"
+   docker exec fabric-tools bash -lc "echo | openssl s_client -connect orderer.kindledger.com:7050 -servername orderer.orderer.kindledger.com"
+   ```
+
+3. **Test DNS resolution**:
+   ```bash
+   docker exec fabric-tools getent hosts orderer
+   docker exec fabric-tools getent hosts orderer.kindledger.com
+   ```
+
+4. **Thử endpoint khác**: Nếu `orderer:7050` vẫn fail, thử `172.18.0.5:7050` (IP trực tiếp)
+
+5. **Kiểm tra crypto config**: Đảm bảo `blockchain/crypto-config/` đã được tạo đúng bởi `generate.sh`
+
 ## 🚀 Production Deployment
 
 ### Scaling Strategy

@@ -1,4 +1,4 @@
-package chaincode
+package contracts
 
 import (
 	"encoding/json"
@@ -41,7 +41,6 @@ type Donation struct {
 }
 
 func (k *KindLedgerContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
-	// Khởi tạo ledger với một số campaign mẫu
 	campaigns := []Campaign{
 		{
 			ID:          "campaign-001",
@@ -74,12 +73,10 @@ func (k *KindLedgerContract) InitLedger(ctx contractapi.TransactionContextInterf
 		if err != nil {
 			return err
 		}
-		err = ctx.GetStub().PutState(campaign.ID, campaignJSON)
-		if err != nil {
+		if err := ctx.GetStub().PutState(campaign.ID, campaignJSON); err != nil {
 			return fmt.Errorf("failed to put campaign %s: %v", campaign.ID, err)
 		}
 	}
-
 	return nil
 }
 
@@ -91,7 +88,6 @@ func (k *KindLedgerContract) CreateCampaign(ctx contractapi.TransactionContextIn
 	if exists {
 		return fmt.Errorf("campaign %s already exists", id)
 	}
-
 	campaign := Campaign{
 		ID:          id,
 		Name:        name,
@@ -104,12 +100,10 @@ func (k *KindLedgerContract) CreateCampaign(ctx contractapi.TransactionContextIn
 		UpdatedAt:   time.Now(),
 		Donors:      []Donor{},
 	}
-
 	campaignJSON, err := json.Marshal(campaign)
 	if err != nil {
 		return err
 	}
-
 	return ctx.GetStub().PutState(id, campaignJSON)
 }
 
@@ -118,55 +112,29 @@ func (k *KindLedgerContract) Donate(ctx contractapi.TransactionContextInterface,
 	if err != nil {
 		return err
 	}
-
 	if campaign.Status != "OPEN" {
 		return fmt.Errorf("campaign %s is not open for donations", campaignID)
 	}
-
-	// Cập nhật campaign
 	campaign.Raised += amount
 	campaign.UpdatedAt = time.Now()
-
-	// Thêm donor vào danh sách
-	donor := Donor{
-		ID:        donorID,
-		Name:      donorName,
-		Amount:    amount,
-		DonatedAt: time.Now(),
-	}
+	donor := Donor{ID: donorID, Name: donorName, Amount: amount, DonatedAt: time.Now()}
 	campaign.Donors = append(campaign.Donors, donor)
-
-	// Kiểm tra nếu đã đạt mục tiêu
 	if campaign.Raised >= campaign.Goal {
 		campaign.Status = "COMPLETED"
 	}
-
 	campaignJSON, err := json.Marshal(campaign)
 	if err != nil {
 		return err
 	}
-
-	// Lưu campaign đã cập nhật
-	err = ctx.GetStub().PutState(campaignID, campaignJSON)
-	if err != nil {
+	if err := ctx.GetStub().PutState(campaignID, campaignJSON); err != nil {
 		return err
 	}
-
-	// Tạo donation record
-	donation := Donation{
-		CampaignID: campaignID,
-		DonorID:    donorID,
-		DonorName:  donorName,
-		Amount:     amount,
-		DonatedAt:  time.Now(),
-	}
-
+	donation := Donation{CampaignID: campaignID, DonorID: donorID, DonorName: donorName, Amount: amount, DonatedAt: time.Now()}
 	donationKey := fmt.Sprintf("donation_%s_%s_%d", campaignID, donorID, time.Now().Unix())
 	donationJSON, err := json.Marshal(donation)
 	if err != nil {
 		return err
 	}
-
 	return ctx.GetStub().PutState(donationKey, donationJSON)
 }
 
@@ -178,13 +146,10 @@ func (k *KindLedgerContract) QueryCampaign(ctx contractapi.TransactionContextInt
 	if campaignJSON == nil {
 		return nil, fmt.Errorf("campaign %s does not exist", id)
 	}
-
 	var campaign Campaign
-	err = json.Unmarshal(campaignJSON, &campaign)
-	if err != nil {
+	if err := json.Unmarshal(campaignJSON, &campaign); err != nil {
 		return nil, err
 	}
-
 	return &campaign, nil
 }
 
@@ -194,27 +159,21 @@ func (k *KindLedgerContract) QueryAllCampaigns(ctx contractapi.TransactionContex
 		return nil, err
 	}
 	defer resultsIterator.Close()
-
 	var campaigns []*Campaign
 	for resultsIterator.HasNext() {
-		queryResponse, err := resultsIterator.Next()
+		qr, err := resultsIterator.Next()
 		if err != nil {
 			return nil, err
 		}
-
-		// Bỏ qua donation records
-		if string(queryResponse.Key)[:9] == "donation_" {
+		if len(qr.Key) >= 9 && qr.Key[:9] == "donation_" {
 			continue
 		}
-
-		var campaign Campaign
-		err = json.Unmarshal(queryResponse.Value, &campaign)
-		if err != nil {
+		var c Campaign
+		if err := json.Unmarshal(qr.Value, &c); err != nil {
 			return nil, err
 		}
-		campaigns = append(campaigns, &campaign)
+		campaigns = append(campaigns, &c)
 	}
-
 	return campaigns, nil
 }
 
@@ -223,43 +182,29 @@ func (k *KindLedgerContract) CampaignExists(ctx contractapi.TransactionContextIn
 	if err != nil {
 		return false, fmt.Errorf("failed to read campaign %s: %v", id, err)
 	}
-
 	return campaignJSON != nil, nil
 }
 
 func (k *KindLedgerContract) GetCampaignHistory(ctx contractapi.TransactionContextInterface, campaignID string) ([]Donation, error) {
-	resultsIterator, err := ctx.GetStub().GetHistoryForKey(campaignID)
+	it, err := ctx.GetStub().GetHistoryForKey(campaignID)
 	if err != nil {
 		return nil, err
 	}
-	defer resultsIterator.Close()
-
+	defer it.Close()
 	var donations []Donation
-	for resultsIterator.HasNext() {
-		queryResponse, err := resultsIterator.Next()
+	for it.HasNext() {
+		qr, err := it.Next()
 		if err != nil {
 			return nil, err
 		}
-
 		var campaign Campaign
-		err = json.Unmarshal(queryResponse.Value, &campaign)
-		if err != nil {
+		if err := json.Unmarshal(qr.Value, &campaign); err != nil {
 			return nil, err
 		}
-
-		// Lấy tất cả donations từ campaign history
 		for _, donor := range campaign.Donors {
-			donation := Donation{
-				CampaignID: campaignID,
-				DonorID:    donor.ID,
-				DonorName:  donor.Name,
-				Amount:     donor.Amount,
-				DonatedAt:  donor.DonatedAt,
-			}
-			donations = append(donations, donation)
+			donations = append(donations, Donation{CampaignID: campaignID, DonorID: donor.ID, DonorName: donor.Name, Amount: donor.Amount, DonatedAt: donor.DonatedAt})
 		}
 	}
-
 	return donations, nil
 }
 
@@ -268,15 +213,12 @@ func (k *KindLedgerContract) UpdateCampaignStatus(ctx contractapi.TransactionCon
 	if err != nil {
 		return err
 	}
-
 	campaign.Status = status
 	campaign.UpdatedAt = time.Now()
-
 	campaignJSON, err := json.Marshal(campaign)
 	if err != nil {
 		return err
 	}
-
 	return ctx.GetStub().PutState(campaignID, campaignJSON)
 }
 
@@ -285,11 +227,9 @@ func (k *KindLedgerContract) GetTotalDonations(ctx contractapi.TransactionContex
 	if err != nil {
 		return 0, err
 	}
-
 	total := 0.0
-	for _, campaign := range campaigns {
-		total += campaign.Raised
+	for _, c := range campaigns {
+		total += c.Raised
 	}
-
 	return total, nil
 }

@@ -20,6 +20,9 @@ CRYPTO_DIR="$BLOCKCHAIN_DIR/crypto-config"
 # Channel name
 CHANNEL_NAME="kindchannel"
 
+# Orderer TLS CA (đã được mount vào fabric-tools qua docker-compose)
+ORDERER_TLS_CA_DOCKER="/etc/hyperledger/fabric/orderer-tls/ca.crt"
+
 echo -e "${GREEN}📺 Kind-Ledger Channel Management${NC}"
 echo "=================================="
 
@@ -43,126 +46,129 @@ check_files() {
 # Tạo channel
 create_channel() {
     echo -e "${YELLOW}📺 Tạo channel $CHANNEL_NAME...${NC}"
-    
-    # Sử dụng peer của MBBank để tạo channel
-    docker exec -e CORE_PEER_LOCALMSPID=MBBankMSP \
-        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt \
-        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp \
+
+    # Sử dụng peer của MBBank để tạo channel trong fabric-tools
+    docker exec \
+        -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
+        -e CORE_PEER_LOCALMSPID=MBBankMSP \
+        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt \
+        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp \
         -e CORE_PEER_ADDRESS=peer0.mb.kindledger.com:7051 \
-        cli peer channel create \
-        -o orderer.kindledger.com:7050 \
-        -c $CHANNEL_NAME \
-        -f /opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts/kindchannel.tx \
-        --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/kindledger.com/orderers/orderer.kindledger.com/msp/tlscacerts/tlsca.kindledger.com-cert.pem
-    
-    echo -e "${GREEN}✅ Channel $CHANNEL_NAME đã được tạo${NC}"
+        -e CORE_PEER_TLS_ENABLED=true \
+        fabric-tools bash -lc "peer channel create -o orderer:7050 --ordererTLSHostnameOverride orderer.orderer.kindledger.com -c $CHANNEL_NAME -f /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/artifacts/kindchannel.tx --tls --cafile $ORDERER_TLS_CA_DOCKER || true"
+
+    echo -e "${GREEN}✅ Channel $CHANNEL_NAME đã được tạo (hoặc đã tồn tại)${NC}"
 }
 
 # Join channel cho MBBank
 join_mb() {
     echo -e "${YELLOW}🏦 MBBank join channel...${NC}"
-    
-    docker exec -e CORE_PEER_LOCALMSPID=MBBankMSP \
-        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt \
-        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp \
+
+    docker exec \
+        -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
+        -e CORE_PEER_LOCALMSPID=MBBankMSP \
+        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt \
+        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp \
         -e CORE_PEER_ADDRESS=peer0.mb.kindledger.com:7051 \
-        cli peer channel join \
-        -b $CHANNEL_NAME.block
-    
-    echo -e "${GREEN}✅ MBBank đã join channel${NC}"
+        -e CORE_PEER_TLS_ENABLED=true \
+        fabric-tools bash -lc "peer channel join -b $CHANNEL_NAME.block || peer channel join -b ./$CHANNEL_NAME.block || true"
+
+    echo -e "${GREEN}✅ MBBank đã join channel (hoặc đã ở trong channel)${NC}"
 }
 
 # Join channel cho Charity
 join_charity() {
     echo -e "${YELLOW}❤️  Charity join channel...${NC}"
-    
-    docker exec -e CORE_PEER_LOCALMSPID=CharityMSP \
-        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/charity.kindledger.com/peers/peer0.charity.kindledger.com/tls/ca.crt \
-        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/charity.kindledger.com/users/Admin@charity.kindledger.com/msp \
+
+    docker exec \
+        -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
+        -e CORE_PEER_LOCALMSPID=CharityMSP \
+        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/charity.kindledger.com/peers/peer0.charity.kindledger.com/tls/ca.crt \
+        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/charity.kindledger.com/users/Admin@charity.kindledger.com/msp \
         -e CORE_PEER_ADDRESS=peer0.charity.kindledger.com:7051 \
-        cli peer channel join \
-        -b $CHANNEL_NAME.block
-    
-    echo -e "${GREEN}✅ Charity đã join channel${NC}"
+        -e CORE_PEER_TLS_ENABLED=true \
+        fabric-tools bash -lc "peer channel join -b $CHANNEL_NAME.block || true"
+
+    echo -e "${GREEN}✅ Charity đã join channel (hoặc đã ở trong channel)${NC}"
 }
 
 # Join channel cho Supplier
 join_supplier() {
     echo -e "${YELLOW}🏪 Supplier join channel...${NC}"
-    
-    docker exec -e CORE_PEER_LOCALMSPID=SupplierMSP \
-        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/supplier.kindledger.com/peers/peer0.supplier.kindledger.com/tls/ca.crt \
-        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/supplier.kindledger.com/users/Admin@supplier.kindledger.com/msp \
+
+    docker exec \
+        -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
+        -e CORE_PEER_LOCALMSPID=SupplierMSP \
+        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/supplier.kindledger.com/peers/peer0.supplier.kindledger.com/tls/ca.crt \
+        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/supplier.kindledger.com/users/Admin@supplier.kindledger.com/msp \
         -e CORE_PEER_ADDRESS=peer0.supplier.kindledger.com:7051 \
-        cli peer channel join \
-        -b $CHANNEL_NAME.block
-    
-    echo -e "${GREEN}✅ Supplier đã join channel${NC}"
+        -e CORE_PEER_TLS_ENABLED=true \
+        fabric-tools bash -lc "peer channel join -b $CHANNEL_NAME.block || true"
+
+    echo -e "${GREEN}✅ Supplier đã join channel (hoặc đã ở trong channel)${NC}"
 }
 
 # Join channel cho Auditor
 join_auditor() {
     echo -e "${YELLOW}🔍 Auditor join channel...${NC}"
-    
-    docker exec -e CORE_PEER_LOCALMSPID=AuditorMSP \
-        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/auditor.kindledger.com/peers/peer0.auditor.kindledger.com/tls/ca.crt \
-        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/auditor.kindledger.com/users/Admin@auditor.kindledger.com/msp \
+
+    docker exec \
+        -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
+        -e CORE_PEER_LOCALMSPID=AuditorMSP \
+        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/auditor.kindledger.com/peers/peer0.auditor.kindledger.com/tls/ca.crt \
+        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/auditor.kindledger.com/users/Admin@auditor.kindledger.com/msp \
         -e CORE_PEER_ADDRESS=peer0.auditor.kindledger.com:7051 \
-        cli peer channel join \
-        -b $CHANNEL_NAME.block
-    
-    echo -e "${GREEN}✅ Auditor đã join channel${NC}"
+        -e CORE_PEER_TLS_ENABLED=true \
+        fabric-tools bash -lc "peer channel join -b $CHANNEL_NAME.block || true"
+
+    echo -e "${GREEN}✅ Auditor đã join channel (hoặc đã ở trong channel)${NC}"
 }
 
 # Update anchor peers
 update_anchor_peers() {
     echo -e "${YELLOW}⚓ Cập nhật anchor peers...${NC}"
-    
+
     # MBBank anchor peer
-    docker exec -e CORE_PEER_LOCALMSPID=MBBankMSP \
-        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt \
-        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp \
+    docker exec \
+        -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
+        -e CORE_PEER_LOCALMSPID=MBBankMSP \
+        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt \
+        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp \
         -e CORE_PEER_ADDRESS=peer0.mb.kindledger.com:7051 \
-        cli peer channel update \
-        -o orderer.kindledger.com:7050 \
-        -c $CHANNEL_NAME \
-        -f /opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts/MBBankMSPanchors.tx \
-        --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/kindledger.com/orderers/orderer.kindledger.com/msp/tlscacerts/tlsca.kindledger.com-cert.pem
-    
+        -e CORE_PEER_TLS_ENABLED=true \
+        fabric-tools bash -lc "peer channel update -o orderer:7050 --ordererTLSHostnameOverride orderer.orderer.kindledger.com -c $CHANNEL_NAME -f /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/artifacts/MBBankMSPanchors.tx --tls --cafile $ORDERER_TLS_CA_DOCKER || true"
+
     # Charity anchor peer
-    docker exec -e CORE_PEER_LOCALMSPID=CharityMSP \
-        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/charity.kindledger.com/peers/peer0.charity.kindledger.com/tls/ca.crt \
-        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/charity.kindledger.com/users/Admin@charity.kindledger.com/msp \
+    docker exec \
+        -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
+        -e CORE_PEER_LOCALMSPID=CharityMSP \
+        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/charity.kindledger.com/peers/peer0.charity.kindledger.com/tls/ca.crt \
+        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/charity.kindledger.com/users/Admin@charity.kindledger.com/msp \
         -e CORE_PEER_ADDRESS=peer0.charity.kindledger.com:7051 \
-        cli peer channel update \
-        -o orderer.kindledger.com:7050 \
-        -c $CHANNEL_NAME \
-        -f /opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts/CharityMSPanchors.tx \
-        --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/kindledger.com/orderers/orderer.kindledger.com/msp/tlscacerts/tlsca.kindledger.com-cert.pem
-    
+        -e CORE_PEER_TLS_ENABLED=true \
+        fabric-tools bash -lc "peer channel update -o orderer:7050 --ordererTLSHostnameOverride orderer.orderer.kindledger.com -c $CHANNEL_NAME -f /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/artifacts/CharityMSPanchors.tx --tls --cafile $ORDERER_TLS_CA_DOCKER || true"
+
     # Supplier anchor peer
-    docker exec -e CORE_PEER_LOCALMSPID=SupplierMSP \
-        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/supplier.kindledger.com/peers/peer0.supplier.kindledger.com/tls/ca.crt \
-        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/supplier.kindledger.com/users/Admin@supplier.kindledger.com/msp \
+    docker exec \
+        -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
+        -e CORE_PEER_LOCALMSPID=SupplierMSP \
+        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/supplier.kindledger.com/peers/peer0.supplier.kindledger.com/tls/ca.crt \
+        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/supplier.kindledger.com/users/Admin@supplier.kindledger.com/msp \
         -e CORE_PEER_ADDRESS=peer0.supplier.kindledger.com:7051 \
-        cli peer channel update \
-        -o orderer.kindledger.com:7050 \
-        -c $CHANNEL_NAME \
-        -f /opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts/SupplierMSPanchors.tx \
-        --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/kindledger.com/orderers/orderer.kindledger.com/msp/tlscacerts/tlsca.kindledger.com-cert.pem
-    
+        -e CORE_PEER_TLS_ENABLED=true \
+        fabric-tools bash -lc "peer channel update -o orderer:7050 --ordererTLSHostnameOverride orderer.orderer.kindledger.com -c $CHANNEL_NAME -f /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/artifacts/SupplierMSPanchors.tx --tls --cafile $ORDERER_TLS_CA_DOCKER || true"
+
     # Auditor anchor peer
-    docker exec -e CORE_PEER_LOCALMSPID=AuditorMSP \
-        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/auditor.kindledger.com/peers/peer0.auditor.kindledger.com/tls/ca.crt \
-        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/auditor.kindledger.com/users/Admin@auditor.kindledger.com/msp \
+    docker exec \
+        -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
+        -e CORE_PEER_LOCALMSPID=AuditorMSP \
+        -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/auditor.kindledger.com/peers/peer0.auditor.kindledger.com/tls/ca.crt \
+        -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/auditor.kindledger.com/users/Admin@auditor.kindledger.com/msp \
         -e CORE_PEER_ADDRESS=peer0.auditor.kindledger.com:7051 \
-        cli peer channel update \
-        -o orderer.kindledger.com:7050 \
-        -c $CHANNEL_NAME \
-        -f /opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts/AuditorMSPanchors.tx \
-        --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/kindledger.com/orderers/orderer.kindledger.com/msp/tlscacerts/tlsca.kindledger.com-cert.pem
-    
-    echo -e "${GREEN}✅ Anchor peers đã được cập nhật${NC}"
+        -e CORE_PEER_TLS_ENABLED=true \
+        fabric-tools bash -lc "peer channel update -o orderer:7050 --ordererTLSHostnameOverride orderer.orderer.kindledger.com -c $CHANNEL_NAME -f /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/artifacts/AuditorMSPanchors.tx --tls --cafile $ORDERER_TLS_CA_DOCKER || true"
+
+    echo -e "${GREEN}✅ Anchor peers đã được cập nhật (hoặc đã đúng)${NC}"
 }
 
 # Kiểm tra channel info

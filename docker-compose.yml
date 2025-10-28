@@ -29,7 +29,10 @@ services:
     ports:
       - "7050:7050"
     networks:
-      - fabric-net
+      fabric-net:
+        aliases:
+          - orderer.kindledger.com
+          - orderer
 
   # MBBank Peer
   peer0.mb.kindledger.com:
@@ -59,6 +62,7 @@ services:
       - /var/run/docker.sock:/host/var/run/docker.sock
       - ./blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/msp:/etc/hyperledger/fabric/msp
       - ./blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls:/etc/hyperledger/fabric/tls
+      - ./blockchain/crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/tls/ca.crt:/etc/hyperledger/fabric/orderer-tls/ca.crt:ro
       - peer0_mb_data:/var/hyperledger/production
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
@@ -97,6 +101,7 @@ services:
       - /var/run/docker.sock:/host/var/run/docker.sock
       - ./blockchain/crypto-config/peerOrganizations/charity.kindledger.com/peers/peer0.charity.kindledger.com/msp:/etc/hyperledger/fabric/msp
       - ./blockchain/crypto-config/peerOrganizations/charity.kindledger.com/peers/peer0.charity.kindledger.com/tls:/etc/hyperledger/fabric/tls
+      - ./blockchain/crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/tls/ca.crt:/etc/hyperledger/fabric/orderer-tls/ca.crt:ro
       - peer0_charity_data:/var/hyperledger/production
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
@@ -135,6 +140,7 @@ services:
       - /var/run/docker.sock:/host/var/run/docker.sock
       - ./blockchain/crypto-config/peerOrganizations/supplier.kindledger.com/peers/peer0.supplier.kindledger.com/msp:/etc/hyperledger/fabric/msp
       - ./blockchain/crypto-config/peerOrganizations/supplier.kindledger.com/peers/peer0.supplier.kindledger.com/tls:/etc/hyperledger/fabric/tls
+      - ./blockchain/crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/tls/ca.crt:/etc/hyperledger/fabric/orderer-tls/ca.crt:ro
       - peer0_supplier_data:/var/hyperledger/production
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
@@ -173,6 +179,7 @@ services:
       - /var/run/docker.sock:/host/var/run/docker.sock
       - ./blockchain/crypto-config/peerOrganizations/auditor.kindledger.com/peers/peer0.auditor.kindledger.com/msp:/etc/hyperledger/fabric/msp
       - ./blockchain/crypto-config/peerOrganizations/auditor.kindledger.com/peers/peer0.auditor.kindledger.com/tls:/etc/hyperledger/fabric/tls
+      - ./blockchain/crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/tls/ca.crt:/etc/hyperledger/fabric/orderer-tls/ca.crt:ro
       - peer0_auditor_data:/var/hyperledger/production
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
@@ -218,6 +225,7 @@ services:
       - ./blockchain:/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain
       - ./gateway/wallet:/opt/gopath/src/github.com/hyperledger/fabric/peer/wallet
       - ./explorer/wallet:/opt/gopath/src/github.com/hyperledger/fabric/peer/explorer-wallet
+      - ./blockchain/crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/tls/ca.crt:/etc/hyperledger/fabric/orderer-tls/ca.crt:ro
     networks:
       - fabric-net
 

@@ -30,13 +30,13 @@ peer lifecycle chaincode approveformyorg \
   --channelID kindchannel --name cvnd-token --version 1 --sequence 1 \
   --package-id ${PKG_ID} \
   --tls --cafile '"$ORDERER_TLS_CA"' \
-  --orderer orderer.kindledger.com:7050 \
+  --orderer orderer:7050 \
   --ordererTLSHostnameOverride orderer.orderer.kindledger.com;
 echo "== commit";
 peer lifecycle chaincode commit \
   --channelID kindchannel --name cvnd-token --version 1 --sequence 1 \
   --tls --cafile '"$ORDERER_TLS_CA"' \
-  --orderer orderer.kindledger.com:7050 \
+  --orderer orderer:7050 \
   --ordererTLSHostnameOverride orderer.orderer.kindledger.com \
   --peerAddresses peer0.mb.kindledger.com:7051 \
   --tlsRootCertFiles '"$MB_PEER_TLS_CA"';
