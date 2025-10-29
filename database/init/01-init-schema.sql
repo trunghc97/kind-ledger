@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP WITH TIME ZONE,
-    metadata JSONB
+    metadata TEXT
 );
 
 -- Create donations table

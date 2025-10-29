@@ -1,17 +1,19 @@
 package com.kindledger.gateway.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.UuidGenerator;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "token_transactions")
 public class TokenTransaction {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @UuidGenerator
     @Column(name = "id", columnDefinition = "uuid")
-    private String id;
+    private UUID id;
 
     @Column(name = "tx_ref", unique = true, nullable = false)
     private String txRef;
@@ -40,8 +42,8 @@ public class TokenTransaction {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
     public String getTxRef() { return txRef; }
     public void setTxRef(String txRef) { this.txRef = txRef; }
     public String getWalletAddress() { return walletAddress; }

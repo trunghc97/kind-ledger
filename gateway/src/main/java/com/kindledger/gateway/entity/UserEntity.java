@@ -45,7 +45,7 @@ public class UserEntity {
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
     
-    @Column(name = "metadata", columnDefinition = "jsonb")
+    @Column(name = "metadata", columnDefinition = "text")
     private String metadata;
     
     // Constructors

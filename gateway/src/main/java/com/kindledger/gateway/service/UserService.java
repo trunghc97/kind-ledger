@@ -36,6 +36,8 @@ public class UserService {
         entity.setStatus(UserEntity.UserStatus.ACTIVE);
         entity.setCreatedAt(LocalDateTime.now());
         entity.setUpdatedAt(LocalDateTime.now());
+        // Ensure metadata is null so PostgreSQL jsonb accepts NULL instead of VARCHAR
+        entity.setMetadata(null);
 
         UserEntity saved = userRepository.save(entity);
 
