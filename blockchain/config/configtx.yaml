@@ -3,7 +3,7 @@ Organizations:
   - &OrdererOrg
     Name: OrdererOrg
     ID: OrdererMSP
-    MSPDir: crypto-config/ordererOrganizations/orderer.kindledger.com/msp
+    MSPDir: ../crypto-config/ordererOrganizations/orderer.kindledger.com/msp
     Policies:
       Readers:
         Type: Signature
@@ -18,17 +18,17 @@ Organizations:
   - &MBBank
     Name: MBBankMSP
     ID: MBBankMSP
-    MSPDir: crypto-config/peerOrganizations/mb.kindledger.com/msp
+    MSPDir: ../crypto-config/peerOrganizations/mb.kindledger.com/msp
     Policies:
       Readers:
         Type: Signature
         Rule: "OR('MBBankMSP.admin', 'MBBankMSP.peer', 'MBBankMSP.client')"
       Writers:
         Type: Signature
-        Rule: "OR('MBBankMSP.admin', 'MBBankMSP.client')"
+        Rule: "OR('MBBankMSP.admin', 'MBBankMSP.client', 'MBBankMSP.peer')"
       Admins:
         Type: Signature
-        Rule: "OR('MBBankMSP.admin')"
+        Rule: "OR('MBBankMSP.admin', 'MBBankMSP.peer')"
       Endorsement:
         Type: Signature
         Rule: "OR('MBBankMSP.peer')"
@@ -39,17 +39,17 @@ Organizations:
   - &Charity
     Name: CharityMSP
     ID: CharityMSP
-    MSPDir: crypto-config/peerOrganizations/charity.kindledger.com/msp
+    MSPDir: ../crypto-config/peerOrganizations/charity.kindledger.com/msp
     Policies:
       Readers:
         Type: Signature
         Rule: "OR('CharityMSP.admin', 'CharityMSP.peer', 'CharityMSP.client')"
       Writers:
         Type: Signature
-        Rule: "OR('CharityMSP.admin', 'CharityMSP.client')"
+        Rule: "OR('CharityMSP.admin', 'CharityMSP.client', 'CharityMSP.peer')"
       Admins:
         Type: Signature
-        Rule: "OR('CharityMSP.admin')"
+        Rule: "OR('CharityMSP.admin', 'CharityMSP.peer')"
       Endorsement:
         Type: Signature
         Rule: "OR('CharityMSP.peer')"
@@ -60,17 +60,17 @@ Organizations:
   - &Supplier
     Name: SupplierMSP
     ID: SupplierMSP
-    MSPDir: crypto-config/peerOrganizations/supplier.kindledger.com/msp
+    MSPDir: ../crypto-config/peerOrganizations/supplier.kindledger.com/msp
     Policies:
       Readers:
         Type: Signature
         Rule: "OR('SupplierMSP.admin', 'SupplierMSP.peer', 'SupplierMSP.client')"
       Writers:
         Type: Signature
-        Rule: "OR('SupplierMSP.admin', 'SupplierMSP.client')"
+        Rule: "OR('SupplierMSP.admin', 'SupplierMSP.client', 'SupplierMSP.peer')"
       Admins:
         Type: Signature
-        Rule: "OR('SupplierMSP.admin')"
+        Rule: "OR('SupplierMSP.admin', 'SupplierMSP.peer')"
       Endorsement:
         Type: Signature
         Rule: "OR('SupplierMSP.peer')"
@@ -81,17 +81,17 @@ Organizations:
   - &Auditor
     Name: AuditorMSP
     ID: AuditorMSP
-    MSPDir: crypto-config/peerOrganizations/auditor.kindledger.com/msp
+    MSPDir: ../crypto-config/peerOrganizations/auditor.kindledger.com/msp
     Policies:
       Readers:
         Type: Signature
         Rule: "OR('AuditorMSP.admin', 'AuditorMSP.peer', 'AuditorMSP.client')"
       Writers:
         Type: Signature
-        Rule: "OR('AuditorMSP.admin', 'AuditorMSP.client')"
+        Rule: "OR('AuditorMSP.admin', 'AuditorMSP.client', 'AuditorMSP.peer')"
       Admins:
         Type: Signature
-        Rule: "OR('AuditorMSP.admin')"
+        Rule: "OR('AuditorMSP.admin', 'AuditorMSP.peer')"
       Endorsement:
         Type: Signature
         Rule: "OR('AuditorMSP.peer')"
@@ -118,7 +118,7 @@ Application: &ApplicationDefaults
       Rule: "ANY Writers"
     Admins:
       Type: ImplicitMeta
-      Rule: "MAJORITY Admins"
+      Rule: "ANY Admins"
     LifecycleEndorsement:
       Type: ImplicitMeta
       Rule: "MAJORITY Endorsement"
@@ -134,8 +134,8 @@ Orderer: &OrdererDefaults
     Consenters:
       - Host: orderer.kindledger.com
         Port: 7050
-        ClientTLSCert: crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/tls/server.crt
-        ServerTLSCert: crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/tls/server.crt
+        ClientTLSCert: ../crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/tls/server.crt
+        ServerTLSCert: ../crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/tls/server.crt
   BatchTimeout: 2s
   BatchSize:
     MaxMessageCount: 10
@@ -166,7 +166,7 @@ Channel: &ChannelDefaults
       Rule: "ANY Writers"
     Admins:
       Type: ImplicitMeta
-      Rule: "MAJORITY Admins"
+      Rule: "ANY Admins"
   Capabilities:
     <<: *ChannelCapabilities
 

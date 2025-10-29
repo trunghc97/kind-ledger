@@ -32,6 +32,7 @@ services:
       fabric-net:
         aliases:
           - orderer.kindledger.com
+          - orderer.orderer.kindledger.com
           - orderer
 
   # MBBank Peer

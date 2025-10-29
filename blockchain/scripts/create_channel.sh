@@ -12,8 +12,8 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Thư mục gốc
-ROOT_DIR=$(pwd)
-BLOCKCHAIN_DIR="$ROOT_DIR/blockchain"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BLOCKCHAIN_DIR="$ROOT_DIR"
 ARTIFACTS_DIR="$BLOCKCHAIN_DIR/artifacts"
 CRYPTO_DIR="$BLOCKCHAIN_DIR/crypto-config"
 
