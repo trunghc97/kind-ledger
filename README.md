@@ -405,78 +405,79 @@ cd blockchain/scripts
 - Nếu thay đổi cấu hình mạng, hãy dừng mạng (`network.sh down`), chạy lại `generate.sh`, rồi khởi động lại (`network.sh up`).
 - Trong CI/CD, nên ghim version và sequence của chaincode, truyền qua tham số script để đảm bảo reproducibility.
 
-### Cách chạy thực tế (cập nhật 2025-10-28)
-
-⚠️ **Lưu ý**: Hiện tại đang xử lý các vấn đề TLS/DNS giữa containers. Dưới đây là cách chạy **tạm thời** cho đến khi fix hoàn tất.
+### Cách chạy tiêu chuẩn (đã chuẩn hoá)
 
 #### Bước 1: Generate artifacts và khởi động network
 
 ```bash
-cd /Users/hct97/Documents/Projects/kind-ledger
+cd kind-ledger
 
-# Tạo crypto materials và genesis block
+# Sinh crypto materials và channel artifacts
 docker run --rm \
-  -v "$PWD":/workspace -w /workspace \
+  -v "$PWD":/workspace \
+  -w /workspace/blockchain/config \
   -e FABRIC_CFG_PATH=/workspace/blockchain/config \
   hyperledger/fabric-tools:2.5 \
-  bash -c "ln -sfn ../crypto-config /workspace/blockchain/config/crypto-config && ./blockchain/scripts/generate.sh"
+  bash -lc "cryptogen generate --config=./crypto-config.yaml --output=../crypto-config && \
+            configtxgen -profile KindLedgerGenesis -channelID system-channel -outputBlock ../artifacts/genesis.block && \
+            configtxgen -profile KindChannel -channelID kindchannel -outputCreateChannelTx ../artifacts/kindchannel.tx && \
+            configtxgen -profile KindChannel -channelID kindchannel -outputAnchorPeersUpdate ../artifacts/MBBankMSPanchors.tx -asOrg MBBankMSP && \
+            configtxgen -profile KindChannel -channelID kindchannel -outputAnchorPeersUpdate ../artifacts/CharityMSPanchors.tx -asOrg CharityMSP && \
+            configtxgen -profile KindChannel -channelID kindchannel -outputAnchorPeersUpdate ../artifacts/SupplierMSPanchors.tx -asOrg SupplierMSP && \
+            configtxgen -profile KindChannel -channelID kindchannel -outputAnchorPeersUpdate ../artifacts/AuditorMSPanchors.tx -asOrg AuditorMSP"
 
-# Khởi động network
+# Khởi động network core
 cd blockchain/scripts
 ./network.sh up
-
-# Khởi động lại services để reset DNS
-cd ../..
-docker-compose restart orderer fabric-tools cli
-sleep 5
 ```
 
-#### Bước 2: Tạo channel (đang fix TLS)
+#### Bước 2: Tạo channel và join peers
 
 ```bash
-cd /Users/hct97/Documents/Projects/kind-ledger
-./blockchain/scripts/create_channel.sh
+cd blockchain/scripts
+./create_channel.sh
 ```
 
-**Lỗi hiện tại**: 
-- ❌ `connection refused` từ orderer
-- ❌ TLS handshake failed giữa fabric-tools và peers (x509 unknown authority)
+#### Bước 3: Deploy chaincode (tuỳ chọn)
 
-**Nguyên nhân đang điều tra**:
-1. Orderer chưa lắng nghe đúng endpoint/port
-2. Mount TLS certificates chưa đúng trong docker-compose
-3. DNS resolution (`orderer`, `orderer.kindledger.com`) trong network chưa ổn định
-
-#### Bước 3: Deploy chaincode (đang pending fix TLS)
+Hiện tại có thể tạm bỏ qua nếu chỉ cần kiểm thử các dịch vụ ứng dụng. Khi cần triển khai, dùng:
 
 ```bash
 cd blockchain/scripts
 ./deploy_chaincode.sh
+# hoặc triển khai token
 ./deploy_cvnd_token.sh
 ```
 
-#### TODO cho ngày mai
+Gợi ý: Khi gặp lỗi lifecycle/policy, xoá dữ liệu, chạy lại từ Bước 1.
 
-1. **Kiểm tra TLS certificates**:
-   - Xác minh file `.../orderer.orderer.kindledger.com/tls/ca.crt` tồn tại
-   - Xác minh mount trong `docker-compose.yml` đúng
-   - Thử dùng tham số `--cafile /etc/hyperledger/fabric/orderer-tls/ca.crt`
+---
 
-2. **Kiểm tra orderer đang lắng nghe**:
-   ```bash
-   docker logs orderer.kindledger.com | grep "listen"
-   docker exec fabric-tools bash -lc "echo | openssl s_client -connect orderer.kindledger.com:7050 -servername orderer.orderer.kindledger.com"
-   ```
+### Không commit các file sinh tự động (Generated files)
 
-3. **Test DNS resolution**:
-   ```bash
-   docker exec fabric-tools getent hosts orderer
-   docker exec fabric-tools getent hosts orderer.kindledger.com
-   ```
+Các đường dẫn sau là file/directory sinh tự động theo máy và KHÔNG nên đưa lên git. Hãy đảm bảo `.gitignore` đã bao gồm:
 
-4. **Thử endpoint khác**: Nếu `orderer:7050` vẫn fail, thử `172.18.0.5:7050` (IP trực tiếp)
+```
+# Fabric generated
+blockchain/crypto-config/
+blockchain/artifacts/
+blockchain/chaincode/*/*.tar.gz
+kindchannel.block
 
-5. **Kiểm tra crypto config**: Đảm bảo `blockchain/crypto-config/` đã được tạo đúng bởi `generate.sh`
+# Wallets & runtime
+gateway/wallet/
+explorer/wallet/
+
+# Local data
+data/**
+``` 
+
+Để làm sạch nhanh:
+
+```bash
+docker-compose down -v
+rm -rf blockchain/crypto-config blockchain/artifacts blockchain/chaincode/*/*.tar.gz kindchannel.block gateway/wallet explorer/wallet data
+```
 
 ## 🚀 Production Deployment
 

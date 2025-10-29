@@ -88,6 +88,8 @@ data/*
 # Blockchain generated files (from setup.sh)
 blockchain/crypto-config/
 blockchain/artifacts/
+blockchain/chaincode/*/*.tar.gz
+kindchannel.block
 
 # Wallet files (contain sensitive keys)
 gateway/wallet/
