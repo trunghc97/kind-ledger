@@ -176,6 +176,27 @@ curl -X POST http://localhost:8080/api/donate \
 curl http://localhost:8080/api/stats/total
 ```
 
+### Token Deposit (cVND Token)
+```bash
+# Deposit token vào ví (tạo và mint token trên blockchain)
+curl -X POST http://localhost:8080/api/v1/deposit \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountNumber": "1234567898",
+    "amount": 500000,
+    "walletAddress": "wallet-mb-003"
+  }'
+
+# Query token balance từ blockchain
+docker exec fabric-tools bash -lc \
+  'export CORE_PEER_LOCALMSPID=MBBankMSP; \
+   export CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp; \
+   export CORE_PEER_ADDRESS=peer0.mb.kindledger.com:7051; \
+   export CORE_PEER_TLS_ENABLED=true; \
+   export CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt; \
+   peer chaincode query -C kindchannel -n cvnd-token -c '"'"'{"function":"BalanceOf","Args":["wallet-mb-003"]}'"'"
+```
+
 ### Authentication
 ```bash
 # Đăng ký user
@@ -395,8 +416,8 @@ cd blockchain/scripts
 1. `generate.sh`
 2. `network.sh up`
 3. `create_channel.sh`
-4. `deploy_chaincode.sh`
-5. (Tuỳ chọn) `deploy_cvnd_token.sh`
+4. `deploy_chaincode.sh` (chaincode chính cho campaigns/donations)
+5. **`deploy_cvnd_token.sh`** (bắt buộc nếu muốn dùng API `/api/v1/deposit` để mint token)
 6. `query_chaincode.sh` (smoke-test)
 
 ### Lưu ý
@@ -440,14 +461,22 @@ cd blockchain/scripts
 
 #### Bước 3: Deploy chaincode
 
-Để hệ thống hoạt động đầy đủ (bao gồm tạo chiến dịch và quyên góp trên blockchain), hãy triển khai chaincode:
+Để hệ thống hoạt động đầy đủ, hãy triển khai các chaincode:
 
 ```bash
 cd blockchain/scripts
+
+# Deploy chaincode chính (cho campaigns/donations)
 ./deploy_chaincode.sh
-# hoặc triển khai token
+
+# Deploy chaincode token (bắt buộc cho API /api/v1/deposit)
 ./deploy_cvnd_token.sh
 ```
+
+**Lưu ý quan trọng về `cvnd-token`:**
+- Chaincode này cần được install trên **TẤT CẢ** 4 peers (MBBank, Charity, Supplier, Auditor) để Gateway có thể endorse transaction thành công
+- Script `deploy_cvnd_token.sh` đã được cập nhật để tự động install trên tất cả peers
+- Nếu chỉ install trên 1 peer, API `/deposit` sẽ trả về txId với prefix "FALLBACK-" thay vì transaction thật trên blockchain
 
 ## 🔒 Lưu ý cấu hình Gateway (bắt buộc)
 
