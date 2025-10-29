@@ -63,8 +63,9 @@ Kind-Ledger là một Proof of Concept (POC) cho hệ thống quyên góp từ t
 - **[Thiết kế Luồng & API](./documents/flow-api-design.md)** - Chi tiết luồng nghiệp vụ và API specifications
 - **[Thiết kế Database](./documents/database-design.md)** - Schema database, cache strategy, và performance
 - **[Hướng dẫn Testing](./documents/testing-guide.md)** - Testing API Gateway với 28 test cases
+- **[Deployment Checklist](./documents/DEPLOYMENT_CHECKLIST.md)** - Checklist chi tiết để setup trên máy mới
 
-**Quick links**: [intro.md](./documents/intro.md) | [flow-api-design.md](./documents/flow-api-design.md) | [database-design.md](./documents/database-design.md) | [testing-guide.md](./documents/testing-guide.md)
+**Quick links**: [intro.md](./documents/intro.md) | [flow-api-design.md](./documents/flow-api-design.md) | [database-design.md](./documents/database-design.md) | [testing-guide.md](./documents/testing-guide.md) | [DEPLOYMENT_CHECKLIST.md](./documents/DEPLOYMENT_CHECKLIST.md)
 
 ## 🚀 Cài đặt và chạy
 
@@ -85,6 +86,18 @@ cd kind-ledger
 
 ### Bước 2: Khởi động hệ thống
 
+**Khuyến nghị:** Sử dụng script tự động `setup.sh` để khởi tạo toàn bộ hệ thống (bao gồm crypto materials, wallet, database, và blockchain network):
+
+```bash
+# Khởi tạo tự động toàn bộ hệ thống
+bash setup.sh
+
+# Sau khi setup hoàn tất, deploy chaincode token cho deposit API
+cd blockchain/scripts
+./deploy_cvnd_token.sh
+```
+
+**Hoặc khởi động thủ công:**
 ```bash
 # Khởi động tất cả services
 docker-compose up -d
@@ -92,6 +105,8 @@ docker-compose up -d
 # Kiểm tra trạng thái containers
 docker-compose ps
 ```
+
+> 💡 **Lưu ý:** Xem [Deployment Checklist](./documents/DEPLOYMENT_CHECKLIST.md) để biết chi tiết đầy đủ về quy trình setup, các file cấu hình đã được cập nhật, và troubleshooting.
 
 ### Bước 3: Kiểm tra hệ thống
 
@@ -119,23 +134,25 @@ bash test-api.sh
 
 ```
 kind-ledger/
-├── documents/                    # 📚 Tài liệu chi tiết
-│   ├── intro.md                 # Kiến trúc tổng thể
-│   ├── flow-api-design.md       # Thiết kế luồng & API
-│   ├── database-design.md       # Thiết kế database
-│   └── testing-guide.md        # Hướng dẫn testing
-├── blockchain/                  # 🔗 Hyperledger Fabric
-│   ├── config/                 # Cấu hình mạng
-│   ├── chaincode/              # Smart contract
-│   └── scripts/                # Scripts tự động
-├── gateway/                    # 🚪 Spring Boot API Gateway
-├── frontend/                   # 🎨 Angular Frontend
-├── explorer/                   # 🔍 Node.js Explorer
-├── database/                   # 🗄️ Database setup
-├── docker-compose.yml          # 🐳 Docker orchestration
-├── test_gateway_api.py         # 🧪 API test script
-├── test-api.sh                 # 🧪 Test wrapper
-└── README.md                   # 📖 Tài liệu này
+├── documents/                         # 📚 Tài liệu chi tiết
+│   ├── intro.md                      # Kiến trúc tổng thể
+│   ├── flow-api-design.md            # Thiết kế luồng & API
+│   ├── database-design.md            # Thiết kế database
+│   ├── testing-guide.md              # Hướng dẫn testing
+│   └── DEPLOYMENT_CHECKLIST.md       # Checklist deployment
+├── blockchain/                       # 🔗 Hyperledger Fabric
+│   ├── config/                       # Cấu hình mạng
+│   ├── chaincode/                    # Smart contract
+│   └── scripts/                      # Scripts tự động
+├── gateway/                          # 🚪 Spring Boot API Gateway
+├── frontend/                         # 🎨 Angular Frontend
+├── explorer/                         # 🔍 Node.js Explorer
+├── database/                         # 🗄️ Database setup
+├── docker-compose.yml                # 🐳 Docker orchestration
+├── setup.sh                          # 🚀 Script khởi tạo tự động
+├── test_gateway_api.py               # 🧪 API test script
+├── test-api.sh                       # 🧪 Test wrapper
+└── README.md                         # 📖 Tài liệu này
 ```
 
 ## 📊 API Endpoints
@@ -426,68 +443,7 @@ cd blockchain/scripts
 - Nếu thay đổi cấu hình mạng, hãy dừng mạng (`network.sh down`), chạy lại `generate.sh`, rồi khởi động lại (`network.sh up`).
 - Trong CI/CD, nên ghim version và sequence của chaincode, truyền qua tham số script để đảm bảo reproducibility.
 
-### Cách chạy tiêu chuẩn (đã chuẩn hoá)
-
-#### Bước 1: Generate artifacts và khởi động network
-
-```bash
-cd kind-ledger
-
-# Sinh crypto materials và channel artifacts
-docker run --rm \
-  -v "$PWD":/workspace \
-  -w /workspace/blockchain/config \
-  -e FABRIC_CFG_PATH=/workspace/blockchain/config \
-  hyperledger/fabric-tools:2.5 \
-  bash -lc "cryptogen generate --config=./crypto-config.yaml --output=../crypto-config && \
-            configtxgen -profile KindLedgerGenesis -channelID system-channel -outputBlock ../artifacts/genesis.block && \
-            configtxgen -profile KindChannel -channelID kindchannel -outputCreateChannelTx ../artifacts/kindchannel.tx && \
-            configtxgen -profile KindChannel -channelID kindchannel -outputAnchorPeersUpdate ../artifacts/MBBankMSPanchors.tx -asOrg MBBankMSP && \
-            configtxgen -profile KindChannel -channelID kindchannel -outputAnchorPeersUpdate ../artifacts/CharityMSPanchors.tx -asOrg CharityMSP && \
-            configtxgen -profile KindChannel -channelID kindchannel -outputAnchorPeersUpdate ../artifacts/SupplierMSPanchors.tx -asOrg SupplierMSP && \
-            configtxgen -profile KindChannel -channelID kindchannel -outputAnchorPeersUpdate ../artifacts/AuditorMSPanchors.tx -asOrg AuditorMSP"
-
-# Khởi động network core
-cd blockchain/scripts
-./network.sh up
-```
-
-#### Bước 2: Tạo channel và join peers
-
-```bash
-cd blockchain/scripts
-./create_channel.sh
-```
-
-#### Bước 3: Deploy chaincode
-
-Để hệ thống hoạt động đầy đủ, hãy triển khai các chaincode:
-
-```bash
-cd blockchain/scripts
-
-# Deploy chaincode chính (cho campaigns/donations)
-./deploy_chaincode.sh
-
-# Deploy chaincode token (bắt buộc cho API /api/v1/deposit)
-./deploy_cvnd_token.sh
-```
-
-**Lưu ý quan trọng về `cvnd-token`:**
-- Chaincode này cần được install trên **TẤT CẢ** 4 peers (MBBank, Charity, Supplier, Auditor) để Gateway có thể endorse transaction thành công
-- Script `deploy_cvnd_token.sh` đã được cập nhật để tự động install trên tất cả peers
-- Nếu chỉ install trên 1 peer, API `/deposit` sẽ trả về txId với prefix "FALLBACK-" thay vì transaction thật trên blockchain
-
-## 🔒 Lưu ý cấu hình Gateway (bắt buộc)
-
-- Gateway cần truy cập crypto materials và wallet để kết nối Fabric SDK.
-- Compose đã cấu hình sẵn:
-  - Mount `./blockchain/crypto-config` vào:
-    - `/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto`
-    - `/app/crypto-config` (để SDK đọc `adminPrivateKey` theo `connection-profile.yaml`).
-  - Mount `./gateway/wallet` vào `/opt/gopath/src/github.com/hyperledger/fabric/peer/wallet`.
-- Nếu khởi tạo mới, cần có file `gateway/wallet/Admin@mb.kindledger.com.id`.
-  - Script `setup.sh` sẽ tự tạo file này từ crypto materials.
+> 📋 **Xem chi tiết:** [Deployment Checklist](./documents/DEPLOYMENT_CHECKLIST.md) - Checklist đầy đủ về quy trình setup từng bước, các file cấu hình đã được cập nhật, troubleshooting, và test API.
 
 ### Khởi tạo sạch từ đầu (fresh setup lần đầu hoặc reset hoàn toàn)
 
@@ -545,7 +501,7 @@ cd blockchain/scripts && ./create_channel.sh
 cd blockchain/scripts && ./deploy_chaincode.sh
 ```
 
-Gợi ý: Khi gặp lỗi lifecycle/policy, xoá dữ liệu, chạy lại từ Bước 1.
+> 💡 **Gợi ý:** Khi gặp lỗi lifecycle/policy, xem [Deployment Checklist](./documents/DEPLOYMENT_CHECKLIST.md) phần Troubleshooting hoặc xóa dữ liệu và chạy lại `setup.sh`.
 
 ---
 
@@ -626,4 +582,4 @@ Kind-Ledger POC đã được triển khai thành công với:
 
 **Last Updated**: 2025-10-28  
 **Version**: 1.0  
-**Maintainer**: KindLedger Team
+**Maintainer**: trunghc97
