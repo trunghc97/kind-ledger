@@ -331,7 +331,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       FABRIC_NETWORKCONFIGPATH: /opt/gopath/src/github.com/hyperledger/fabric/peer/config/connection-profile.yaml
       FABRIC_CHANNELNAME: kindchannel
-      FABRIC_CHAINCODENAME: kindledgercc
+      FABRIC_CHAINCODENAME: cvnd-token
       FABRIC_ORGANIZATION: MBBank
       FABRIC_USER: Admin@mb.kindledger.com
       # Database configurations

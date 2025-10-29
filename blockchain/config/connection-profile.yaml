@@ -17,6 +17,7 @@ channels:
         chaincodeQuery: true
         ledgerQuery: true
         eventSource: true
+        discover: true
       peer0.charity.kindledger.com:
         endorsingPeer: true
         chaincodeQuery: true
@@ -75,9 +76,9 @@ organizations:
       path: crypto-config/peerOrganizations/auditor.kindledger.com/users/Admin@auditor.kindledger.com/msp/signcerts/Admin@auditor.kindledger.com-cert.pem
 orderers:
   orderer.kindledger.com:
-    url: grpc://localhost:7050
+    url: grpcs://orderer.orderer.kindledger.com:7050
     grpcOptions:
-      ssl-target-name-override: orderer.kindledger.com
+      ssl-target-name-override: orderer.orderer.kindledger.com
       grpc.keepalive_time_ms: 60000
       grpc.keepalive_timeout_ms: 5000
       grpc.keepalive_permit_without_calls: true
@@ -85,10 +86,10 @@ orderers:
       grpc.http2.min_time_between_pings_ms: 10000
       grpc.http2.min_ping_interval_without_data_ms: 300000
     tlsCACerts:
-      path: crypto-config/ordererOrganizations/kindledger.com/orderers/orderer.kindledger.com/msp/tlscacerts/tlsca.kindledger.com-cert.pem
+      path: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/msp/tlscacerts/tlsca.orderer.kindledger.com-cert.pem
 peers:
   peer0.mb.kindledger.com:
-    url: grpc://localhost:7051
+    url: grpcs://peer0.mb.kindledger.com:7051
     grpcOptions:
       ssl-target-name-override: peer0.mb.kindledger.com
       grpc.keepalive_time_ms: 60000
@@ -98,9 +99,9 @@ peers:
       grpc.http2.min_time_between_pings_ms: 10000
       grpc.http2.min_ping_interval_without_data_ms: 300000
     tlsCACerts:
-      path: crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt
+      path: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt
   peer0.charity.kindledger.com:
-    url: grpc://localhost:8051
+    url: grpcs://peer0.charity.kindledger.com:7051
     grpcOptions:
       ssl-target-name-override: peer0.charity.kindledger.com
       grpc.keepalive_time_ms: 60000
@@ -110,9 +111,9 @@ peers:
       grpc.http2.min_time_between_pings_ms: 10000
       grpc.http2.min_ping_interval_without_data_ms: 300000
     tlsCACerts:
-      path: crypto-config/peerOrganizations/charity.kindledger.com/peers/peer0.charity.kindledger.com/tls/ca.crt
+      path: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/charity.kindledger.com/peers/peer0.charity.kindledger.com/tls/ca.crt
   peer0.supplier.kindledger.com:
-    url: grpc://localhost:9051
+    url: grpcs://peer0.supplier.kindledger.com:7051
     grpcOptions:
       ssl-target-name-override: peer0.supplier.kindledger.com
       grpc.keepalive_time_ms: 60000
@@ -122,9 +123,9 @@ peers:
       grpc.http2.min_time_between_pings_ms: 10000
       grpc.http2.min_ping_interval_without_data_ms: 300000
     tlsCACerts:
-      path: crypto-config/peerOrganizations/supplier.kindledger.com/peers/peer0.supplier.kindledger.com/tls/ca.crt
+      path: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/supplier.kindledger.com/peers/peer0.supplier.kindledger.com/tls/ca.crt
   peer0.auditor.kindledger.com:
-    url: grpc://localhost:10051
+    url: grpcs://peer0.auditor.kindledger.com:7051
     grpcOptions:
       ssl-target-name-override: peer0.auditor.kindledger.com
       grpc.keepalive_time_ms: 60000
@@ -134,7 +135,7 @@ peers:
       grpc.http2.min_time_between_pings_ms: 10000
       grpc.http2.min_ping_interval_without_data_ms: 300000
     tlsCACerts:
-      path: crypto-config/peerOrganizations/auditor.kindledger.com/peers/peer0.auditor.kindledger.com/tls/ca.crt
+      path: /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/auditor.kindledger.com/peers/peer0.auditor.kindledger.com/tls/ca.crt
 certificateAuthorities:
   ca.mb.kindledger.com:
     url: https://localhost:7054

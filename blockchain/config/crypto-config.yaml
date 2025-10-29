@@ -1,12 +1,14 @@
 OrdererOrgs:
   - Name: Orderer
     Domain: orderer.kindledger.com
+    EnableNodeOUs: true
     Specs:
       - Hostname: orderer
 
 PeerOrgs:
   - Name: MBBank
     Domain: mb.kindledger.com
+    EnableNodeOUs: true
     Template:
       Count: 1
     Users:
@@ -14,6 +16,7 @@ PeerOrgs:
 
   - Name: Charity
     Domain: charity.kindledger.com
+    EnableNodeOUs: true
     Template:
       Count: 1
     Users:
@@ -21,6 +24,7 @@ PeerOrgs:
 
   - Name: Supplier
     Domain: supplier.kindledger.com
+    EnableNodeOUs: true
     Template:
       Count: 1
     Users:
@@ -28,6 +32,7 @@ PeerOrgs:
 
   - Name: Auditor
     Domain: auditor.kindledger.com
+    EnableNodeOUs: true
     Template:
       Count: 1
     Users:

@@ -130,9 +130,11 @@ Application: &ApplicationDefaults
 
 Orderer: &OrdererDefaults
   OrdererType: etcdraft
+  Addresses:
+    - orderer.orderer.kindledger.com:7050
   EtcdRaft:
     Consenters:
-      - Host: orderer.kindledger.com
+      - Host: orderer.orderer.kindledger.com
         Port: 7050
         ClientTLSCert: ../crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/tls/server.crt
         ServerTLSCert: ../crypto-config/ordererOrganizations/orderer.kindledger.com/orderers/orderer.orderer.kindledger.com/tls/server.crt

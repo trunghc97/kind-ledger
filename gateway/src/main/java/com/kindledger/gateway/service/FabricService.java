@@ -63,9 +63,22 @@ public class FabricService {
                 .identity(wallet, fabricConfig.getUser())
                 .networkConfig(networkConfigPath)
                 .discovery(false);
-        
-        gateway = builder.connect();
-        network = gateway.getNetwork(fabricConfig.getChannelName());
+
+        try {
+            gateway = builder.connect();
+            network = gateway.getNetwork(fabricConfig.getChannelName());
+        } catch (GatewayRuntimeException ex) {
+            // Xử lý trường hợp SDK báo channel đã tồn tại trong client cache
+            if (ex.getMessage() != null && ex.getMessage().contains("Channel by the name") && ex.getMessage().contains("already exists")) {
+                logger.warn("Channel already exists in client cache, retrying with a fresh Gateway instance");
+                try { if (gateway != null) gateway.close(); } catch (Exception ignore) {}
+                gateway = builder.connect();
+                network = gateway.getNetwork(fabricConfig.getChannelName());
+            } else {
+                throw ex;
+            }
+        }
+
         contract = network.getContract(fabricConfig.getChaincodeName());
         
         logger.info("Fabric connection initialized successfully");

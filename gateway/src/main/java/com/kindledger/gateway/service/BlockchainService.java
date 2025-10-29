@@ -41,13 +41,13 @@ public class BlockchainService {
             Gateway.Builder builder = Gateway.createBuilder()
                     .identity(wallet, fabricUser)
                     .networkConfig(networkConfigPath)
-                    .discovery(true);
+                    .discovery(false);
 
             try (Gateway gateway = builder.connect()) {
                 Network network = gateway.getNetwork(channelName);
                 Contract contract = network.getContract(chaincodeName);
 
-                Transaction tx = contract.createTransaction("mint");
+                Transaction tx = contract.createTransaction("Mint");
                 String txId = tx.getTransactionId();
 
                 // Submit transaction: args (walletAddress, amount, tokenHash)
