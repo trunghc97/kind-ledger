@@ -65,6 +65,10 @@ package_chaincode() {
         rm "$CHAINCODE_PACKAGE"
     fi
     
+    # Đồng bộ và vendor dependencies (không commit vendor, chỉ dùng lúc build)
+    docker exec -w /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/chaincode/kindledgercc \
+        fabric-tools bash -lc 'set -e; go mod tidy; go mod vendor'
+
     # Package chaincode
     docker exec -w /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/chaincode/kindledgercc \
         fabric-tools peer lifecycle chaincode package $CHAINCODE_PACKAGE \
