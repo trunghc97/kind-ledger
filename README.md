@@ -460,6 +460,35 @@ cd blockchain/scripts
 - Nếu khởi tạo mới, cần có file `gateway/wallet/Admin@mb.kindledger.com.id`.
   - Script `setup.sh` sẽ tự tạo file này từ crypto materials.
 
+### Khởi tạo sạch từ đầu (fresh setup lần đầu hoặc reset hoàn toàn)
+
+```bash
+cd kind-ledger
+
+# Dừng và xóa toàn bộ containers + volumes
+(docker-compose down -v || docker compose down -v || true)
+
+# Xóa tất cả dữ liệu sinh tự động và dấu đã khởi tạo
+rm -rf blockchain/crypto-config \
+       blockchain/artifacts \
+       blockchain/chaincode/*/*.tar.gz \
+       kindchannel.block \
+       gateway/wallet \
+       explorer/wallet \
+       data \
+       .init-completed
+
+# Tạo lại thư mục dữ liệu tối thiểu
+mkdir -p data/{mongo,postgres,redis,java,go}
+
+# Khởi tạo lại toàn bộ theo quy trình chuẩn hóa
+bash setup.sh
+```
+
+Ghi chú:
+- Nếu `setup.sh` báo project đã được khởi tạo trước đó, hãy xóa file `.init-completed` rồi chạy lại.
+- Sau khi `setup.sh` hoàn tất, network sẽ được dựng, channel được tạo và chaincode chính được triển khai.
+
 ## 🧰 Khởi tạo nhanh cho lần sau (1 lệnh duy nhất)
 
 ```bash

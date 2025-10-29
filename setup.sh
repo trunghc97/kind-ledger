@@ -92,7 +92,7 @@ generate_artifacts() {
     
     # Tạo genesis block bằng Docker
     docker run --rm -v "$(pwd):/opt/gopath/src/github.com/hyperledger/fabric/peer" \
-        -v "$(pwd)/../crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config" \
+        -v "$(pwd)/../crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/crypto-config" \
         -e FABRIC_CFG_PATH=/opt/gopath/src/github.com/hyperledger/fabric/peer \
         hyperledger/fabric-tools:2.5 \
         configtxgen -profile KindLedgerGenesis -channelID system-channel \
@@ -100,7 +100,7 @@ generate_artifacts() {
     
     # Tạo channel transaction bằng Docker
     docker run --rm -v "$(pwd):/opt/gopath/src/github.com/hyperledger/fabric/peer" \
-        -v "$(pwd)/../crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config" \
+        -v "$(pwd)/../crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/crypto-config" \
         -e FABRIC_CFG_PATH=/opt/gopath/src/github.com/hyperledger/fabric/peer \
         hyperledger/fabric-tools:2.5 \
         configtxgen -profile KindChannel -outputCreateChannelTx /opt/gopath/src/github.com/hyperledger/fabric/peer/artifacts/kindchannel.tx \
@@ -108,28 +108,28 @@ generate_artifacts() {
     
     # Tạo anchor peer transactions bằng Docker
     docker run --rm -v "$(pwd):/opt/gopath/src/github.com/hyperledger/fabric/peer" \
-        -v "$(pwd)/../crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config" \
+        -v "$(pwd)/../crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/crypto-config" \
         -e FABRIC_CFG_PATH=/opt/gopath/src/github.com/hyperledger/fabric/peer \
         hyperledger/fabric-tools:2.5 \
         configtxgen -profile KindChannel -outputAnchorPeersUpdate /opt/gopath/src/github.com/hyperledger/fabric/peer/artifacts/MBBankMSPanchors.tx \
         -channelID kindchannel -asOrg MBBankMSP
     
     docker run --rm -v "$(pwd):/opt/gopath/src/github.com/hyperledger/fabric/peer" \
-        -v "$(pwd)/../crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config" \
+        -v "$(pwd)/../crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/crypto-config" \
         -e FABRIC_CFG_PATH=/opt/gopath/src/github.com/hyperledger/fabric/peer \
         hyperledger/fabric-tools:2.5 \
         configtxgen -profile KindChannel -outputAnchorPeersUpdate /opt/gopath/src/github.com/hyperledger/fabric/peer/artifacts/CharityMSPanchors.tx \
         -channelID kindchannel -asOrg CharityMSP
     
     docker run --rm -v "$(pwd):/opt/gopath/src/github.com/hyperledger/fabric/peer" \
-        -v "$(pwd)/../crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config" \
+        -v "$(pwd)/../crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/crypto-config" \
         -e FABRIC_CFG_PATH=/opt/gopath/src/github.com/hyperledger/fabric/peer \
         hyperledger/fabric-tools:2.5 \
         configtxgen -profile KindChannel -outputAnchorPeersUpdate /opt/gopath/src/github.com/hyperledger/fabric/peer/artifacts/SupplierMSPanchors.tx \
         -channelID kindchannel -asOrg SupplierMSP
     
     docker run --rm -v "$(pwd):/opt/gopath/src/github.com/hyperledger/fabric/peer" \
-        -v "$(pwd)/../crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto-config" \
+        -v "$(pwd)/../crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/crypto-config" \
         -e FABRIC_CFG_PATH=/opt/gopath/src/github.com/hyperledger/fabric/peer \
         hyperledger/fabric-tools:2.5 \
         configtxgen -profile KindChannel -outputAnchorPeersUpdate /opt/gopath/src/github.com/hyperledger/fabric/peer/artifacts/AuditorMSPanchors.tx \
