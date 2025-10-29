@@ -156,3 +156,6 @@ target/
 
 # Ignore all vendored dependencies (Go)
 blockchain/chaincode/**/vendor/
+
+# Ignore all vendor folders at any depth
+**/vendor/
