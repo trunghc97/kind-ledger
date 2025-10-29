@@ -438,15 +438,53 @@ cd blockchain/scripts
 ./create_channel.sh
 ```
 
-#### Bước 3: Deploy chaincode (tuỳ chọn)
+#### Bước 3: Deploy chaincode
 
-Hiện tại có thể tạm bỏ qua nếu chỉ cần kiểm thử các dịch vụ ứng dụng. Khi cần triển khai, dùng:
+Để hệ thống hoạt động đầy đủ (bao gồm tạo chiến dịch và quyên góp trên blockchain), hãy triển khai chaincode:
 
 ```bash
 cd blockchain/scripts
 ./deploy_chaincode.sh
 # hoặc triển khai token
 ./deploy_cvnd_token.sh
+```
+
+## 🔒 Lưu ý cấu hình Gateway (bắt buộc)
+
+- Gateway cần truy cập crypto materials và wallet để kết nối Fabric SDK.
+- Compose đã cấu hình sẵn:
+  - Mount `./blockchain/crypto-config` vào:
+    - `/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto`
+    - `/app/crypto-config` (để SDK đọc `adminPrivateKey` theo `connection-profile.yaml`).
+  - Mount `./gateway/wallet` vào `/opt/gopath/src/github.com/hyperledger/fabric/peer/wallet`.
+- Nếu khởi tạo mới, cần có file `gateway/wallet/Admin@mb.kindledger.com.id`.
+  - Script `setup.sh` sẽ tự tạo file này từ crypto materials.
+
+## 🧰 Khởi tạo nhanh cho lần sau (1 lệnh duy nhất)
+
+```bash
+# Từ thư mục gốc repo
+bash setup.sh
+
+# Script sẽ tự động:
+# - Dọn dẹp crypto/artifacts/wallet cũ
+# - Generate crypto + artifacts
+# - Tạo wallet cho Gateway và Explorer
+# - Khởi tạo databases
+# - Khởi động network, tạo channel
+# - (Mặc định) triển khai chaincode chính
+# - In hướng dẫn truy cập services
+```
+
+Nếu chỉ muốn reset và chạy lại nhanh không cần sinh lại crypto:
+
+```bash
+docker-compose down -v
+rm -rf data
+mkdir -p data/{mongo,postgres,redis,java,go}
+docker-compose up -d
+cd blockchain/scripts && ./create_channel.sh
+cd blockchain/scripts && ./deploy_chaincode.sh
 ```
 
 Gợi ý: Khi gặp lỗi lifecycle/policy, xoá dữ liệu, chạy lại từ Bước 1.

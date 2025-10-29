@@ -269,8 +269,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    logging:
-      driver: "none"
     networks:
       - fabric-net
 
@@ -349,6 +347,7 @@ services:
       - ./blockchain/crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto
       - ./blockchain/config:/opt/gopath/src/github.com/hyperledger/fabric/peer/config
       - ./gateway/wallet:/opt/gopath/src/github.com/hyperledger/fabric/peer/wallet
+      - ./blockchain/crypto-config:/app/crypto-config
       - ./data/java:/root/.m2
     depends_on:
       - postgres

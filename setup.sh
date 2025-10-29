@@ -337,6 +337,13 @@ main() {
     create_explorer_wallet
     init_database
     
+    echo -e "${YELLOW}🚀 Khởi động network và tạo channel...${NC}"
+    (cd blockchain/scripts && ./network.sh up)
+    (cd blockchain/scripts && ./create_channel.sh)
+    
+    echo -e "${YELLOW}📦 Triển khai chaincode chính...${NC}"
+    (cd blockchain/scripts && ./deploy_chaincode.sh || true)
+
     # Tạo file đánh dấu đã khởi tạo
     touch "$INIT_FLAG_FILE"
     
@@ -355,8 +362,10 @@ main() {
     echo "   gateway/wallet/          - Gateway wallet identity"
     echo "   explorer/wallet/         - Explorer wallet identity"
     echo ""
-    echo -e "${BLUE}🚀 Bây giờ bạn có thể chạy:${NC}"
-    echo "   docker-compose up --build"
+    echo -e "${BLUE}🚀 Hệ thống đã được khởi động. Truy cập:${NC}"
+    echo "   - API Gateway: http://localhost:8080/api/health"
+    echo "   - Frontend:    http://localhost:4200"
+    echo "   - Explorer:    http://localhost:3000"
     echo ""
     echo -e "${YELLOW}💡 Lưu ý:${NC}"
     echo "   - Dữ liệu và cache sẽ được lưu trữ trong các thư mục data/"
