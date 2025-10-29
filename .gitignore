@@ -153,3 +153,6 @@ target/
 *.ngsummary.json
 **/*.ngfactory.ts
 **/*.shim.ts
+
+# Ignore all vendored dependencies (Go)
+blockchain/chaincode/**/vendor/
