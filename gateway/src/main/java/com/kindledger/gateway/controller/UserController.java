@@ -61,6 +61,20 @@ public class UserController {
         ));
     }
 
+    @GetMapping("/wallet/{address}/balance")
+    public ResponseEntity<?> getWalletBalance(@PathVariable("address") String address) {
+        try {
+            var wallet = walletService.getByAddress(address);
+            return ResponseEntity.ok(Map.of(
+                "address", wallet.getAddress(),
+                "cVndBalance", wallet.getBalance(),
+                "status", wallet.getStatus()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body(Map.of("error", "Wallet not found"));
+        }
+    }
+
     private UUID parseUserId(String id) {
         if (id.startsWith("user-")) {
             return UUID.fromString(id.substring(5));

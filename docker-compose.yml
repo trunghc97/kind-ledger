@@ -372,8 +372,6 @@ services:
     build: 
       context: ./frontend
       dockerfile: Dockerfile
-      cache_from:
-        - kindledger-frontend:latest
     container_name: kindledger-frontend
     restart: unless-stopped
     ports:

@@ -1,10 +1,12 @@
 package com.kindledger.gateway.controller;
 
+import com.kindledger.gateway.entity.WalletEntity;
 import com.kindledger.gateway.model.AuthResponse;
 import com.kindledger.gateway.model.LoginRequest;
 import com.kindledger.gateway.model.RegisterRequest;
 import com.kindledger.gateway.model.User;
 import com.kindledger.gateway.service.UserService;
+import com.kindledger.gateway.service.WalletService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +26,9 @@ public class AuthenticationController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private WalletService walletService;
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@RequestBody RegisterRequest request) {
@@ -102,11 +107,24 @@ public class AuthenticationController {
             // Authenticate user
             User user = userService.login(request.getUsername(), request.getPassword());
 
+            // Get wallet information
+            AuthResponse authResponse = new AuthResponse();
+            if (user.getId() != null) {
+                try {
+                    // Correctly parse UUID from user ID string
+                    UUID userId = UUID.fromString(user.getId().replace("user-", ""));
+                    WalletEntity wallet = walletService.getByUserId(userId);
+                    authResponse.setWalletId(wallet.getId().toString());
+                    authResponse.setWalletStatus(wallet.getStatus().name());
+                } catch (Exception e) {
+                    logger.warn("Wallet not found for user {}, continuing without wallet info", user.getId());
+                }
+            }
+
             // Generate token (simple mock token)
             String token = "Bearer " + UUID.randomUUID().toString();
 
             // Create response
-            AuthResponse authResponse = new AuthResponse();
             authResponse.setToken(token);
             authResponse.setUserId(user.getId());
             authResponse.setUsername(user.getUsername());

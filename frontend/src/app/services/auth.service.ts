@@ -9,6 +9,8 @@ export interface User {
   email: string;
   fullName: string;
   role: string;
+  walletId?: string;      // thêm dòng này
+  walletStatus?: string;  // thêm dòng này
 }
 
 export interface AuthResponse {
@@ -18,6 +20,8 @@ export interface AuthResponse {
   email: string;
   fullName: string;
   role: string;
+  walletId?: string;
+  walletStatus?: string;
 }
 
 export interface ApiResponse<T> {
@@ -50,21 +54,25 @@ export class AuthService {
     }).pipe(
       tap(response => {
         if (response.success && response.data) {
-          // Store token and user info
+          // Store token and user info (bổ sung walletId, walletStatus)
           localStorage.setItem('token', response.data.token);
           localStorage.setItem('user', JSON.stringify({
             id: response.data.userId,
             username: response.data.username,
             email: response.data.email,
             fullName: response.data.fullName,
-            role: response.data.role
+            role: response.data.role,
+            walletId: response.data.walletId,
+            walletStatus: response.data.walletStatus
           }));
           this.currentUserSubject.next({
             id: response.data.userId,
             username: response.data.username,
             email: response.data.email,
             fullName: response.data.fullName,
-            role: response.data.role
+            role: response.data.role,
+            walletId: response.data.walletId,
+            walletStatus: response.data.walletStatus
           });
           
           // Check for redirect URL
@@ -87,21 +95,25 @@ export class AuthService {
     }).pipe(
       tap(response => {
         if (response.success && response.data) {
-          // Store token and user info
+          // Store token and user info (bổ sung walletId, walletStatus)
           localStorage.setItem('token', response.data.token);
           localStorage.setItem('user', JSON.stringify({
             id: response.data.userId,
             username: response.data.username,
             email: response.data.email,
             fullName: response.data.fullName,
-            role: response.data.role
+            role: response.data.role,
+            walletId: response.data.walletId,
+            walletStatus: response.data.walletStatus
           }));
           this.currentUserSubject.next({
             id: response.data.userId,
             username: response.data.username,
             email: response.data.email,
             fullName: response.data.fullName,
-            role: response.data.role
+            role: response.data.role,
+            walletId: response.data.walletId,
+            walletStatus: response.data.walletStatus
           });
           
           // Check for redirect URL
@@ -155,4 +167,3 @@ export class AuthService {
     return throwError(() => errorMessage);
   }
 }
-

@@ -9,67 +9,68 @@ import { Transaction, WalletBalance, DonateRequest, MintRequest, TransactionResp
   providedIn: 'root'
 })
 export class GatewayService {
-  private apiBase = environment.apiBase;
+  private apiBase = environment.apiUrl;
+  private apiV1 = this.apiBase + '/v1';
 
   constructor(private http: HttpClient) {}
 
   // Campaign endpoints
   getCampaigns(): Observable<Campaign[]> {
-    return this.http.get<Campaign[]>(`${this.apiBase}/campaigns`);
+    return this.http.get<Campaign[]>(`${this.apiV1}/campaigns`);
   }
 
   getActiveCampaigns(): Observable<Campaign[]> {
-    return this.http.get<Campaign[]>(`${this.apiBase}/campaigns/active`);
+    return this.http.get<Campaign[]>(`${this.apiV1}/campaigns/active`);
   }
 
   getCampaignById(id: number): Observable<Campaign> {
-    return this.http.get<Campaign>(`${this.apiBase}/campaigns/${id}`);
+    return this.http.get<Campaign>(`${this.apiV1}/campaigns/${id}`);
   }
 
   getCampaignProgress(id: number): Observable<number> {
-    return this.http.get<number>(`${this.apiBase}/campaigns/${id}/progress`);
+    return this.http.get<number>(`${this.apiV1}/campaigns/${id}/progress`);
   }
 
   // Transaction endpoints
   donate(data: DonateRequest): Observable<TransactionResponse> {
-    return this.http.post<TransactionResponse>(`${this.apiBase}/donate`, data);
+    return this.http.post<TransactionResponse>(`${this.apiV1}/donate`, data);
   }
 
   mint(data: MintRequest): Observable<TransactionResponse> {
-    return this.http.post<TransactionResponse>(`${this.apiBase}/mint`, data);
+    return this.http.post<TransactionResponse>(`${this.apiV1}/mint`, data);
   }
 
   burn(walletAddress: string, amount: number): Observable<TransactionResponse> {
-    return this.http.post<TransactionResponse>(`${this.apiBase}/burn`, null, {
+    return this.http.post<TransactionResponse>(`${this.apiV1}/burn`, null, {
       params: { walletAddress, amount: amount.toString() }
     });
   }
 
   redeem(walletAddress: string, amount: number): Observable<TransactionResponse> {
-    return this.http.post<TransactionResponse>(`${this.apiBase}/redeem`, null, {
+    return this.http.post<TransactionResponse>(`${this.apiV1}/redeem`, null, {
       params: { walletAddress, amount: amount.toString() }
     });
   }
 
   // Wallet & user banking
   linkBank(userId: string, accountNumber: string): Observable<any> {
-    return this.http.post(`${this.apiBase}/users/${userId}/link-bank`, { accountNumber });
+    return this.http.post(`${this.apiV1}/users/${userId}/link-bank`, { accountNumber });
   }
 
   transfer(fromWalletAddress: string, toWalletAddress: string, amount: number): Observable<any> {
-    return this.http.post(`${this.apiBase}/transfer`, { fromWalletAddress, toWalletAddress, amount });
+    return this.http.post(`${this.apiV1}/transfer`, { fromWalletAddress, toWalletAddress, amount });
   }
 
   getWalletBalance(walletAddress: string): Observable<WalletBalance> {
-    return this.http.get<WalletBalance>(`${this.apiBase}/wallet/${walletAddress}/balance`);
+    return this.http.get<WalletBalance>(`${this.apiV1}/wallet/${walletAddress}/balance`);
   }
 
   getWalletTransactions(walletAddress: string): Observable<Transaction[]> {
-    return this.http.get<Transaction[]>(`${this.apiBase}/wallet/${walletAddress}/transactions`);
+    return this.http.get<Transaction[]>(`${this.apiV1}/wallet/${walletAddress}/transactions`);
   }
 
   checkKyc(walletAddress: string): Observable<string> {
-    return this.http.get<string>(`${this.apiBase}/kyc/check`, {
+    return this.http.get<string>(`${this.apiV1}/kyc/check`, {
       params: { walletAddress }
     });
   }

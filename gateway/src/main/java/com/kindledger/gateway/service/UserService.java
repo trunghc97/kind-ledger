@@ -4,7 +4,8 @@ import com.kindledger.gateway.entity.UserEntity;
 import com.kindledger.gateway.entity.WalletEntity;
 import com.kindledger.gateway.model.User;
 import com.kindledger.gateway.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -13,13 +14,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class UserService {
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private WalletService walletService;
+    private final UserRepository userRepository;
+    private final WalletService walletService;
 
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
@@ -45,16 +45,11 @@ public class UserService {
 
         UserEntity saved = userRepository.save(entity);
 
-        // Auto-create wallet in PENDING state with generated address (best-effort)
-        try {
-            String walletAddress = "WAL-" + saved.getId();
-            WalletEntity wallet = walletService.createPendingWalletForUser(saved.getId(), walletAddress);
-            saved.setWalletId(wallet.getId());
-            userRepository.save(saved);
-        } catch (Exception ex) {
-            // Không chặn đăng ký nếu phần ví gặp lỗi môi trường (DB migration, etc.)
-            // Có thể xử lý tạo ví lại ở nền sau
-        }
+        // Create a wallet for the new user and link it.
+        // The UserEntity is still managed by the persistence context,
+        // so changes will be flushed at the end of the transaction.
+        WalletEntity wallet = walletService.createPendingWalletForUser(saved.getId(), "klw-" + UUID.randomUUID());
+        saved.setWalletId(wallet.getId());
 
         User user = new User();
         user.setId("user-" + saved.getId().toString());

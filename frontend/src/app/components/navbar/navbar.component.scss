@@ -1,0 +1,18 @@
+.wallet-action-modal {
+  position: fixed;
+  z-index: 1050;
+  left: 0; right: 0; top: 0; bottom: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.wallet-modal-bg {
+  position: absolute; left: 0; right: 0; top: 0; bottom: 0;
+  background: rgba(0,0,0,0.3);
+}
+.wallet-modal-content {
+  z-index: 1;
+  min-width: 350px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 32px 0 rgba(0,0,0,.13);
+  padding: 1.5rem;
+}
