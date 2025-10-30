@@ -51,6 +51,15 @@ export class GatewayService {
     });
   }
 
+  // Wallet & user banking
+  linkBank(userId: string, accountNumber: string): Observable<any> {
+    return this.http.post(`${this.apiBase}/users/${userId}/link-bank`, { accountNumber });
+  }
+
+  transfer(fromWalletAddress: string, toWalletAddress: string, amount: number): Observable<any> {
+    return this.http.post(`${this.apiBase}/transfer`, { fromWalletAddress, toWalletAddress, amount });
+  }
+
   getWalletBalance(walletAddress: string): Observable<WalletBalance> {
     return this.http.get<WalletBalance>(`${this.apiBase}/wallet/${walletAddress}/balance`);
   }

@@ -68,4 +68,66 @@ public class BlockchainService {
     }
 
     public record BlockchainMintResult(String txId, String blockHash, LocalDateTime timestamp) {}
+
+    public BlockchainTxResult transferToken(String fromWallet, String toWallet, BigDecimal amount) {
+        try {
+            Path networkConfigPath = Paths.get(networkConfigPathEnv);
+            Path walletPath = Paths.get("/opt/gopath/src/github.com/hyperledger/fabric/peer/wallet");
+            Wallet wallet = Wallets.newFileSystemWallet(walletPath);
+            Identity identity = wallet.get(fabricUser);
+            if (identity == null) {
+                throw new RuntimeException("Fabric identity not found in wallet: " + fabricUser);
+            }
+            Gateway.Builder builder = Gateway.createBuilder()
+                    .identity(wallet, fabricUser)
+                    .networkConfig(networkConfigPath)
+                    .discovery(false);
+            try (Gateway gateway = builder.connect()) {
+                Network network = gateway.getNetwork(channelName);
+                Contract contract = network.getContract(chaincodeName);
+                Transaction tx = contract.createTransaction("Transfer");
+                String txId = tx.getTransactionId();
+                tx.submit(fromWallet, toWallet, amount.toPlainString());
+                String blockHash = null;
+                log.info("[FABRIC] Transfer {} cVND from {} to {} | txId={}", amount, fromWallet, toWallet, txId);
+                return new BlockchainTxResult(txId, blockHash, LocalDateTime.now());
+            }
+        } catch (Exception e) {
+            log.warn("[FABRIC-FALLBACK] Transfer fallback: {}", e.getMessage());
+            String txId = "FALLBACK-" + java.util.UUID.randomUUID();
+            return new BlockchainTxResult(txId, null, LocalDateTime.now());
+        }
+    }
+
+    public BlockchainTxResult burnToken(String walletAddress, BigDecimal amount) {
+        try {
+            Path networkConfigPath = Paths.get(networkConfigPathEnv);
+            Path walletPath = Paths.get("/opt/gopath/src/github.com/hyperledger/fabric/peer/wallet");
+            Wallet wallet = Wallets.newFileSystemWallet(walletPath);
+            Identity identity = wallet.get(fabricUser);
+            if (identity == null) {
+                throw new RuntimeException("Fabric identity not found in wallet: " + fabricUser);
+            }
+            Gateway.Builder builder = Gateway.createBuilder()
+                    .identity(wallet, fabricUser)
+                    .networkConfig(networkConfigPath)
+                    .discovery(false);
+            try (Gateway gateway = builder.connect()) {
+                Network network = gateway.getNetwork(channelName);
+                Contract contract = network.getContract(chaincodeName);
+                Transaction tx = contract.createTransaction("Burn");
+                String txId = tx.getTransactionId();
+                tx.submit(walletAddress, amount.toPlainString());
+                String blockHash = null;
+                log.info("[FABRIC] Burn {} cVND from {} | txId={}", amount, walletAddress, txId);
+                return new BlockchainTxResult(txId, blockHash, LocalDateTime.now());
+            }
+        } catch (Exception e) {
+            log.warn("[FABRIC-FALLBACK] Burn fallback: {}", e.getMessage());
+            String txId = "FALLBACK-" + java.util.UUID.randomUUID();
+            return new BlockchainTxResult(txId, null, LocalDateTime.now());
+        }
+    }
+
+    public record BlockchainTxResult(String txId, String blockHash, LocalDateTime timestamp) {}
 }

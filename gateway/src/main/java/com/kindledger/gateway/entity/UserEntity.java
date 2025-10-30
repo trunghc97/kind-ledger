@@ -47,6 +47,9 @@ public class UserEntity {
     
     @Column(name = "metadata", columnDefinition = "text")
     private String metadata;
+
+    @Column(name = "wallet_id", columnDefinition = "uuid")
+    private UUID walletId;
     
     // Constructors
     public UserEntity() {
@@ -159,6 +162,14 @@ public class UserEntity {
     
     public void setMetadata(String metadata) {
         this.metadata = metadata;
+    }
+
+    public UUID getWalletId() {
+        return walletId;
+    }
+
+    public void setWalletId(UUID walletId) {
+        this.walletId = walletId;
     }
     
     @PreUpdate

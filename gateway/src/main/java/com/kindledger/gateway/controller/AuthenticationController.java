@@ -73,10 +73,16 @@ public class AuthenticationController {
 
         } catch (RuntimeException e) {
             logger.error("Error registering user: {}", e.getMessage());
-            return createErrorResponse(e.getMessage());
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Unexpected error registering user: {}", e.getMessage());
-            return createErrorResponse("Failed to register user");
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to register user");
+            return ResponseEntity.ok(response);
         }
     }
 
@@ -156,4 +162,3 @@ public class AuthenticationController {
         return ResponseEntity.badRequest().body(response);
     }
 }
-

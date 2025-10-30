@@ -1,6 +1,7 @@
 package com.kindledger.gateway.service;
 
 import com.kindledger.gateway.entity.UserEntity;
+import com.kindledger.gateway.entity.WalletEntity;
 import com.kindledger.gateway.model.User;
 import com.kindledger.gateway.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,9 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private WalletService walletService;
 
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
@@ -40,6 +44,17 @@ public class UserService {
         entity.setMetadata(null);
 
         UserEntity saved = userRepository.save(entity);
+
+        // Auto-create wallet in PENDING state with generated address (best-effort)
+        try {
+            String walletAddress = "WAL-" + saved.getId();
+            WalletEntity wallet = walletService.createPendingWalletForUser(saved.getId(), walletAddress);
+            saved.setWalletId(wallet.getId());
+            userRepository.save(saved);
+        } catch (Exception ex) {
+            // Không chặn đăng ký nếu phần ví gặp lỗi môi trường (DB migration, etc.)
+            // Có thể xử lý tạo ví lại ở nền sau
+        }
 
         User user = new User();
         user.setId("user-" + saved.getId().toString());
