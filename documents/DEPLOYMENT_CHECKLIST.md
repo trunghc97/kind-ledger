@@ -157,3 +157,99 @@ docker-compose logs gateway | grep -i "fabric\|mint\|cvnd-token\|fallback"
 
 **Lưu ý:** Tất cả các thay đổi này đã được áp dụng trong codebase. Chỉ cần clone và chạy `setup.sh` là đủ.
 
+
+## 8. Ghi chú quan trọng để chạy trên máy khác (tránh lỗi DNS/Orderer)
+
+Trong một số môi trường Docker, container `orderer.kindledger.com` có thể không được gán IP đúng lúc các container khác (như `fabric-tools`) khởi động, dẫn đến lỗi DNS kiểu:
+
+- "lookup orderer on 127.0.0.11:53: no such host"
+- Hoặc lệnh `peer channel create/join/update` báo lỗi không kết nối được orderer
+
+Để tránh và xử lý nhanh:
+
+1) Khởi động mạng theo thứ tự chuẩn
+
+```bash
+cd /Users/iteazy/Documents/Projects/kind-ledger
+docker compose up -d
+
+# Xác nhận orderer đã chạy
+docker ps --format '{{.Names}}\t{{.Status}}' | grep orderer
+
+# Orderer PHẢI có IP trong network 'kindledger_fabric-net'
+docker inspect -f '{{json .NetworkSettings.Networks}}' orderer.kindledger.com
+# Kỳ vọng: trường IPAddress có giá trị, ví dụ "IPAddress":"172.18.0.6"
+```
+
+Nếu `IPAddress` trống hoặc DNS trong container khác không resolve được `orderer`:
+
+2) Khởi động lại network + orderer sạch (không đụng code)
+
+```bash
+cd /Users/iteazy/Documents/Projects/kind-ledger
+docker compose rm -sf orderer || true
+docker network rm kindledger_fabric-net || true
+docker compose up -d
+
+# Kiểm tra lại IP của orderer
+docker inspect -f '{{json .NetworkSettings.Networks}}' orderer.kindledger.com
+```
+
+3) Làm mới DNS trong `fabric-tools`
+
+```bash
+docker restart fabric-tools
+docker exec fabric-tools bash -lc 'getent hosts orderer || getent hosts orderer.kindledger.com || echo nohost'
+```
+
+4) Tạo channel và join (ưu tiên dùng alias `orderer`; nếu vẫn lỗi, dùng `orderer.kindledger.com:7050` hoặc IP của orderer kèm TLS override)
+
+```bash
+# Tạo channel
+docker exec -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
+  -e CORE_PEER_LOCALMSPID=MBBankMSP \
+  -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt \
+  -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp \
+  -e CORE_PEER_ADDRESS=peer0.mb.kindledger.com:7051 \
+  -e CORE_PEER_TLS_ENABLED=true \
+  fabric-tools bash -lc "peer channel create -o orderer:7050 --ordererTLSHostnameOverride orderer.orderer.kindledger.com -c kindchannel -f /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/artifacts/kindchannel.tx --tls --cafile /etc/hyperledger/fabric/orderer-tls/ca.crt"
+
+# Nếu cần dùng IP (lấy bằng docker inspect), thay -o ${ORDERER_IP}:7050
+
+# Join các peer
+docker exec -e FABRIC_CFG_PATH=/etc/hyperledger/fabric -e CORE_PEER_LOCALMSPID=MBBankMSP -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp -e CORE_PEER_ADDRESS=peer0.mb.kindledger.com:7051 -e CORE_PEER_TLS_ENABLED=true fabric-tools bash -lc "peer channel join -b kindchannel.block"
+docker exec -e FABRIC_CFG_PATH=/etc/hyperledger/fabric -e CORE_PEER_LOCALMSPID=CharityMSP -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/charity.kindledger.com/peers/peer0.charity.kindledger.com/tls/ca.crt -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/charity.kindledger.com/users/Admin@charity.kindledger.com/msp -e CORE_PEER_ADDRESS=peer0.charity.kindledger.com:7051 -e CORE_PEER_TLS_ENABLED=true fabric-tools bash -lc "peer channel join -b kindchannel.block"
+docker exec -e FABRIC_CFG_PATH=/etc/hyperledger/fabric -e CORE_PEER_LOCALMSPID=SupplierMSP -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/supplier.kindledger.com/peers/peer0.supplier.kindledger.com/tls/ca.crt -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/supplier.kindledger.com/users/Admin@supplier.kindledger.com/msp -e CORE_PEER_ADDRESS=peer0.supplier.kindledger.com:7051 -e CORE_PEER_TLS_ENABLED=true fabric-tools bash -lc "peer channel join -b kindchannel.block"
+docker exec -e FABRIC_CFG_PATH=/etc/hyperledger/fabric -e CORE_PEER_LOCALMSPID=AuditorMSP -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/auditor.kindledger.com/peers/peer0.auditor.kindledger.com/tls/ca.crt -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/auditor.kindledger.com/users/Admin@auditor.kindledger.com/msp -e CORE_PEER_ADDRESS=peer0.auditor.kindledger.com:7051 -e CORE_PEER_TLS_ENABLED=true fabric-tools bash -lc "peer channel join -b kindchannel.block"
+```
+
+5) Cập nhật anchor peers và deploy chaincode (nếu DNS đã OK, chỉ cần chạy script):
+
+```bash
+cd /Users/iteazy/Documents/Projects/kind-ledger/blockchain/scripts
+./create_channel.sh
+./deploy_cvnd_token.sh
+```
+
+6) Gọi lại API deposit và xác nhận TX thật (không FALLBACK)
+
+```bash
+curl -sS -X POST http://localhost:8080/api/v1/deposit \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "accountNumber": "1234567898",
+    "amount": 500000,
+    "walletAddress": "wallet-mb-003"
+  }'
+```
+
+Quick fix (một dòng) nếu gặp lại lỗi DNS:
+
+```bash
+cd /Users/iteazy/Documents/Projects/kind-ledger && \
+docker compose rm -sf orderer && docker network rm kindledger_fabric-net || true && \
+docker compose up -d && \
+docker restart fabric-tools && \
+cd blockchain/scripts && ./create_channel.sh && ./deploy_cvnd_token.sh
+```
+
