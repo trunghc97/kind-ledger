@@ -9,8 +9,8 @@ export interface User {
   email: string;
   fullName: string;
   role: string;
-  walletId?: string;      // thêm dòng này
-  walletStatus?: string;  // thêm dòng này
+  walletAddress?: string;
+  walletStatus?: string;
 }
 
 export interface AuthResponse {
@@ -20,7 +20,7 @@ export interface AuthResponse {
   email: string;
   fullName: string;
   role: string;
-  walletId?: string;
+  walletAddress?: string;
   walletStatus?: string;
 }
 
@@ -62,7 +62,7 @@ export class AuthService {
             email: response.data.email,
             fullName: response.data.fullName,
             role: response.data.role,
-            walletId: response.data.walletId,
+            walletAddress: response.data.walletAddress,
             walletStatus: response.data.walletStatus
           }));
           this.currentUserSubject.next({
@@ -71,7 +71,7 @@ export class AuthService {
             email: response.data.email,
             fullName: response.data.fullName,
             role: response.data.role,
-            walletId: response.data.walletId,
+            walletAddress: response.data.walletAddress,
             walletStatus: response.data.walletStatus
           });
           
@@ -103,7 +103,7 @@ export class AuthService {
             email: response.data.email,
             fullName: response.data.fullName,
             role: response.data.role,
-            walletId: response.data.walletId,
+            walletAddress: response.data.walletAddress,
             walletStatus: response.data.walletStatus
           }));
           this.currentUserSubject.next({
@@ -112,7 +112,7 @@ export class AuthService {
             email: response.data.email,
             fullName: response.data.fullName,
             role: response.data.role,
-            walletId: response.data.walletId,
+            walletAddress: response.data.walletAddress,
             walletStatus: response.data.walletStatus
           });
           

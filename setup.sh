@@ -339,11 +339,22 @@ main() {
     
     echo -e "${YELLOW}🚀 Khởi động network và tạo channel...${NC}"
     (cd blockchain/scripts && ./network.sh up)
-    (cd blockchain/scripts && ./create_channel.sh)
+    (cd blockchain/scripts && ./create_channel.sh || true)
     
     echo -e "${YELLOW}📦 Triển khai chaincode chính...${NC}"
     (cd blockchain/scripts && ./deploy_chaincode.sh || true)
-
+    
+    # --- Thêm thao tác deploy cvnd-token đúng checklist ---
+    echo -e "${YELLOW}🔁 Đảm bảo deploy chaincode cvnd-token trên tất cả peers...${NC}"
+    (cd blockchain/scripts && ./deploy_cvnd_token.sh)
+    
+    echo -e "${YELLOW}⏳ Chờ các container ổn định...${NC}"
+    sleep 20
+    
+    # Kiểm tra lại channel và committed chaincode
+    docker exec fabric-tools bash -lc 'peer channel list'
+    docker exec fabric-tools bash -lc 'peer lifecycle chaincode querycommitted -C kindchannel'
+    
     # Tạo file đánh dấu đã khởi tạo
     touch "$INIT_FLAG_FILE"
     

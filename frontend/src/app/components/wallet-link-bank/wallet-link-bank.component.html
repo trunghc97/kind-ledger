@@ -1,0 +1,14 @@
+<div class="link-bank-container">
+  <h2 class="link-title">Liên kết tài khoản ngân hàng</h2>
+  <form (ngSubmit)="submitBankLink()" #form="ngForm" class="link-bank-form">
+    <div class="mb-3">
+      <label class="form-label">Số tài khoản ngân hàng</label>
+      <input class="form-control big-input" type="text" [(ngModel)]="accountNumber" name="accountNumber" required minlength="6" [disabled]="loading" />
+    </div>
+    <div class="mb-3 text-danger" *ngIf="errorMsg">{{ errorMsg }}</div>
+    <button type="submit" class="btn btn-primary w-100" [disabled]="loading">
+      <span *ngIf="!loading">Liên kết</span>
+      <span *ngIf="loading"><i class="fas fa-spinner fa-spin"></i> Đang xử lý…</span>
+    </button>
+  </form>
+</div>

@@ -8,6 +8,8 @@ import { DonateComponent } from './components/donate/donate.component';
 import { LoginComponent } from './components/login/login.component';
 import { RegisterComponent } from './components/register/register.component';
 import { AuthGuard } from './guards/auth.guard';
+import { DepositComponent } from './components/deposit/deposit.component';
+import { WalletLinkBankComponent } from './components/wallet-link-bank/wallet-link-bank.component';
 
 const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -18,6 +20,8 @@ const routes: Routes = [
   { path: 'campaigns/:id', component: CampaignDetailComponent, canActivate: [AuthGuard] },
   { path: 'create-campaign', component: CreateCampaignComponent, canActivate: [AuthGuard] },
   { path: 'donate/:id', component: DonateComponent, canActivate: [AuthGuard] },
+  { path: 'deposit', component: DepositComponent },
+  { path: 'link-bank', component: WalletLinkBankComponent },
   { path: '**', redirectTo: '/login' }
 ];
 

@@ -52,9 +52,6 @@ public class UserEntity {
     @Column(name = "metadata", columnDefinition = "jsonb")
     private Map<String, Object> metadata;
 
-    @Column(name = "wallet_id", columnDefinition = "uuid")
-    private UUID walletId;
-    
     // Constructors
     public UserEntity() {
         this.createdAt = LocalDateTime.now();
@@ -166,14 +163,6 @@ public class UserEntity {
     
     public void setMetadata(Map<String, Object> metadata) {
         this.metadata = metadata;
-    }
-
-    public UUID getWalletId() {
-        return walletId;
-    }
-
-    public void setWalletId(UUID walletId) {
-        this.walletId = walletId;
     }
     
     @PreUpdate

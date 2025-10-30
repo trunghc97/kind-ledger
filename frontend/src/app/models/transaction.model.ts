@@ -10,10 +10,9 @@ export interface Transaction {
 }
 
 export interface WalletBalance {
-  id: number;
-  walletAddress: string;
+  address: string;
   cVndBalance: number;
-  lastUpdated: string;
+  status: string;
 }
 
 export interface DonateRequest {

@@ -5,6 +5,7 @@ import com.kindledger.gateway.model.AuthResponse;
 import com.kindledger.gateway.model.LoginRequest;
 import com.kindledger.gateway.model.RegisterRequest;
 import com.kindledger.gateway.model.User;
+import com.kindledger.gateway.model.UserInfoDto;
 import com.kindledger.gateway.service.UserService;
 import com.kindledger.gateway.service.WalletService;
 import org.slf4j.Logger;
@@ -94,51 +95,15 @@ public class AuthenticationController {
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request) {
         try {
-            logger.info("Login attempt for user: {}", request.getUsername());
-
-            // Validate request
-            if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
+            if (request.getUsername() == null || request.getUsername().trim().isEmpty())
                 return createErrorResponse("Username is required");
-            }
-            if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+            if (request.getPassword() == null || request.getPassword().trim().isEmpty())
                 return createErrorResponse("Password is required");
-            }
-
-            // Authenticate user
-            User user = userService.login(request.getUsername(), request.getPassword());
-
-            // Get wallet information
-            AuthResponse authResponse = new AuthResponse();
-            if (user.getId() != null) {
-                try {
-                    // Correctly parse UUID from user ID string
-                    UUID userId = UUID.fromString(user.getId().replace("user-", ""));
-                    WalletEntity wallet = walletService.getByUserId(userId);
-                    authResponse.setWalletId(wallet.getId().toString());
-                    authResponse.setWalletStatus(wallet.getStatus().name());
-                } catch (Exception e) {
-                    logger.warn("Wallet not found for user {}, continuing without wallet info", user.getId());
-                }
-            }
-
-            // Generate token (simple mock token)
-            String token = "Bearer " + UUID.randomUUID().toString();
-
-            // Create response
-            authResponse.setToken(token);
-            authResponse.setUserId(user.getId());
-            authResponse.setUsername(user.getUsername());
-            authResponse.setEmail(user.getEmail());
-            authResponse.setFullName(user.getFullName());
-            authResponse.setRole(user.getRole());
-
+            UserInfoDto userInfo = userService.loginAndGetUserInfo(request.getUsername(), request.getPassword());
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Login successful");
-            response.put("data", authResponse);
-
+            response.put("data", userInfo);
             return ResponseEntity.ok(response);
-
         } catch (RuntimeException e) {
             logger.error("Error logging in user: {}", e.getMessage());
             return createErrorResponse(e.getMessage());

@@ -3,7 +3,6 @@ package com.kindledger.gateway.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kindledger.gateway.config.FabricConfig;
 import com.kindledger.gateway.model.Campaign;
-import com.kindledger.gateway.model.DonationRequest;
 import org.hyperledger.fabric.gateway.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,12 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
 @Service
 public class FabricService {
@@ -210,6 +207,16 @@ public class FabricService {
         } catch (Exception e) {
             logger.error("Error initializing ledger: {}", e.getMessage());
             throw new RuntimeException("Failed to initialize ledger", e);
+        }
+    }
+    
+    public String queryBalanceOf(String address) {
+        try {
+            byte[] result = contract.evaluateTransaction("BalanceOf", address);
+            return new String(result).trim();
+        } catch (Exception e) {
+            logger.error("Error query BalanceOf for address {}: {}", address, e.getMessage());
+            return "0";
         }
     }
     

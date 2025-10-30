@@ -22,23 +22,6 @@ ARTIFACTS_DIR="$BLOCKCHAIN_DIR/artifacts"
 echo -e "${GREEN}🚀 Kind-Ledger Blockchain Setup${NC}"
 echo "=================================="
 
-# Kiểm tra các công cụ cần thiết
-check_tools() {
-    echo -e "${YELLOW}📋 Kiểm tra công cụ cần thiết...${NC}"
-    
-    if ! command -v cryptogen &> /dev/null; then
-        echo -e "${RED}❌ cryptogen không được tìm thấy. Vui lòng cài đặt Hyperledger Fabric tools.${NC}"
-        exit 1
-    fi
-    
-    if ! command -v configtxgen &> /dev/null; then
-        echo -e "${RED}❌ configtxgen không được tìm thấy. Vui lòng cài đặt Hyperledger Fabric tools.${NC}"
-        exit 1
-    fi
-    
-    echo -e "${GREEN}✅ Tất cả công cụ đã sẵn sàng${NC}"
-}
-
 # Tạo thư mục cần thiết
 create_directories() {
     echo -e "${YELLOW}📁 Tạo thư mục cần thiết...${NC}"
@@ -52,38 +35,40 @@ create_directories() {
 
 # Tạo crypto materials
 generate_crypto() {
-    echo -e "${YELLOW}🔐 Tạo crypto materials...${NC}"
-    
+    echo -e "${YELLOW}🔐 Tạo crypto materials bằng Docker...${NC}"
     cd "$CONFIG_DIR"
-    
     if [ -d "$CRYPTO_DIR" ]; then
         echo -e "${YELLOW}⚠️  Xóa crypto-config cũ...${NC}"
         rm -rf "$CRYPTO_DIR"
     fi
-    
-    cryptogen generate --config=crypto-config.yaml --output="$CRYPTO_DIR"
-    
+    docker run --rm -v "$ROOT_DIR:/opt/gopath/src/github.com/hyperledger/fabric/peer" \
+      hyperledger/fabric-tools:2.5 \
+      cryptogen generate --config=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/config/crypto-config.yaml \
+        --output=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config
     echo -e "${GREEN}✅ Crypto materials đã được tạo${NC}"
 }
 
 # Tạo genesis block và channel transaction
 generate_genesis() {
-    echo -e "${YELLOW}📦 Tạo genesis block và channel transaction...${NC}"
-    
+    echo -e "${YELLOW}📦 Tạo genesis block và channel transaction bằng Docker...${NC}"
     cd "$CONFIG_DIR"
-    
-    # Tạo genesis block
-    configtxgen -profile KindLedgerGenesis -channelID system-channel -outputBlock "$ARTIFACTS_DIR/genesis.block"
-    
-    # Tạo channel transaction
-    configtxgen -profile KindChannel -outputCreateChannelTx "$ARTIFACTS_DIR/kindchannel.tx" -channelID kindchannel
-    
-    # Tạo anchor peer transactions
-    configtxgen -profile KindChannel -outputAnchorPeersUpdate "$ARTIFACTS_DIR/MBBankMSPanchors.tx" -channelID kindchannel -asOrg MBBankMSP
-    configtxgen -profile KindChannel -outputAnchorPeersUpdate "$ARTIFACTS_DIR/CharityMSPanchors.tx" -channelID kindchannel -asOrg CharityMSP
-    configtxgen -profile KindChannel -outputAnchorPeersUpdate "$ARTIFACTS_DIR/SupplierMSPanchors.tx" -channelID kindchannel -asOrg SupplierMSP
-    configtxgen -profile KindChannel -outputAnchorPeersUpdate "$ARTIFACTS_DIR/AuditorMSPanchors.tx" -channelID kindchannel -asOrg AuditorMSP
-    
+    # genesis block
+    docker run --rm -v "$ROOT_DIR:/opt/gopath/src/github.com/hyperledger/fabric/peer" \
+      hyperledger/fabric-tools:2.5 \
+      bash -c "export FABRIC_CFG_PATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/config && \
+        configtxgen -profile KindLedgerGenesis -channelID system-channel -outputBlock /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/artifacts/genesis.block"
+    # channel tx
+    docker run --rm -v "$ROOT_DIR:/opt/gopath/src/github.com/hyperledger/fabric/peer" \
+      hyperledger/fabric-tools:2.5 \
+      bash -c "export FABRIC_CFG_PATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/config && \
+        configtxgen -profile KindChannel -outputCreateChannelTx /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/artifacts/kindchannel.tx -channelID kindchannel"
+    # anchor peers
+    for ORG in MBBankMSP CharityMSP SupplierMSP AuditorMSP; do
+      docker run --rm -v "$ROOT_DIR:/opt/gopath/src/github.com/hyperledger/fabric/peer" \
+        hyperledger/fabric-tools:2.5 \
+        bash -c "export FABRIC_CFG_PATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/config && \
+          configtxgen -profile KindChannel -outputAnchorPeersUpdate /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/artifacts/${ORG}anchors.tx -channelID kindchannel -asOrg $ORG"
+    done
     echo -e "${GREEN}✅ Genesis block và channel transactions đã được tạo${NC}"
 }
 
@@ -265,7 +250,6 @@ EOF
 
 # Main function
 main() {
-    check_tools
     create_directories
     generate_crypto
     generate_genesis

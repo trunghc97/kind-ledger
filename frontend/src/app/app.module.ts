@@ -16,6 +16,7 @@ import { LoginComponent } from './components/login/login.component';
 import { RegisterComponent } from './components/register/register.component';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { WalletLinkBankComponent } from './components/wallet-link-bank/wallet-link-bank.component';
+import { DepositComponent } from './components/deposit/deposit.component';
 
 @NgModule({
   declarations: [
@@ -28,7 +29,9 @@ import { WalletLinkBankComponent } from './components/wallet-link-bank/wallet-li
     NavbarComponent,
     FooterComponent,
     LoginComponent,
-    RegisterComponent
+    RegisterComponent,
+    DepositComponent,
+    WalletLinkBankComponent
   ],
   providers: [
     {
@@ -42,8 +45,7 @@ import { WalletLinkBankComponent } from './components/wallet-link-bank/wallet-li
     AppRoutingModule,
     HttpClientModule,
     FormsModule,
-    ReactiveFormsModule,
-    WalletLinkBankComponent
+    ReactiveFormsModule
   ],
   bootstrap: [AppComponent]
 })

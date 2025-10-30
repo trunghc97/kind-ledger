@@ -5,6 +5,7 @@ import com.kindledger.gateway.entity.WalletStatus;
 import com.kindledger.gateway.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,9 @@ import java.util.UUID;
 public class WalletService {
 
     private final WalletRepository walletRepository;
+
+    @Autowired(required = false)
+    private FabricService fabricService;
 
     @Transactional
     public WalletEntity createPendingWalletForUser(UUID userId, String address) {
@@ -48,5 +52,16 @@ public class WalletService {
     public WalletEntity getByAddress(String address) {
         return walletRepository.findByAddress(address)
                 .orElseThrow(() -> new IllegalArgumentException("Wallet not found for address"));
+    }
+
+    public BigDecimal getBlockchainBalance(String address) {
+        try {
+            String result = fabricService.queryBalanceOf(address);
+            if (result == null || result.isEmpty()) return BigDecimal.ZERO;
+            return new BigDecimal(result);
+        } catch (Exception e) {
+            log.warn("Không lấy được balance từ blockchain cho {}: {}", address, e.getMessage());
+            return BigDecimal.ZERO;
+        }
     }
 }

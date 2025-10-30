@@ -4,34 +4,38 @@ import { AuthService } from '../../services/auth.service';
 import { GatewayService } from '../../services/gateway.service';
 
 @Component({
-  selector: 'app-wallet-link-bank',
-  templateUrl: './wallet-link-bank.component.html',
-  styleUrls: ['./wallet-link-bank.component.scss']
+  selector: 'app-deposit',
+  templateUrl: './deposit.component.html',
+  styleUrls: ['./deposit.component.scss']
 })
-export class WalletLinkBankComponent {
-  accountNumber = '';
+export class DepositComponent {
+  amount: number|null = null;
   loading = false;
   errorMsg = '';
 
-  constructor(private auth: AuthService, private gateway: GatewayService, private router: Router) {}
+  constructor(
+    private auth: AuthService,
+    private gateway: GatewayService,
+    private router: Router
+  ) {}
 
-  submitBankLink() {
+  submitDeposit() {
     this.errorMsg = '';
-    if (!this.accountNumber || this.accountNumber.length < 6) {
-      this.errorMsg = 'Số tài khoản phải hợp lệ';
+    if (!this.amount || this.amount < 1000) {
+      this.errorMsg = 'Số tiền phải lớn hơn 1,000 VND';
       return;
     }
     this.loading = true;
     const walletAddress = this.auth.getCurrentUser()?.walletAddress;
     if (!walletAddress) { this.errorMsg = 'Không tìm thấy ví'; this.loading = false; return; }
-    this.gateway.linkBank(walletAddress, this.accountNumber).subscribe({
+    this.gateway.deposit(walletAddress, this.amount).subscribe({
       next: () => {
         this.loading = false;
         this.router.navigate(['/']);
       },
       error: (err) => {
         this.loading = false;
-        this.errorMsg = 'Liên kết thất bại: ' + (err.error?.message || err.message || 'Lỗi không xác định');
+        this.errorMsg = 'Nạp tiền thất bại: ' + (err.error?.message || err.message || 'Lỗi không xác định');
       }
     });
   }

@@ -35,12 +35,14 @@ export class NavbarComponent implements OnInit {
 
   fetchWallet() {
     this.loadingWallet = true;
-    if (!this.currentUser || !this.currentUser.walletId) return;
-    // Dùng đúng WalletId backend trả ra
-    const walletAddress = this.currentUser.walletId;
+    if (!this.currentUser || !this.currentUser.walletAddress) {
+      this.loadingWallet = false;
+      return;
+    }
+    const walletAddress = this.currentUser.walletAddress;
     this.gateway.getWalletBalance(walletAddress).subscribe({
       next: (res: any) => {
-        this.walletBalance = res?.cVndBalance ?? 0;
+        this.walletBalance = Number(res?.cVndBalance ?? 0);
         this.walletActive = res?.status === 'ACTIVE';
         this.loadingWallet = false;
       },
@@ -67,9 +69,20 @@ export class NavbarComponent implements OnInit {
     this.fetchWallet();
   }
 
-  onDeposit() {
-    this.showWalletAction = false;
-    this.fetchWallet();
+  onDeposit(form: any) {
+    if (!this.currentUser?.walletAddress) return;
+    const amount = form.value.amount;
+    if (!amount) return;
+    this.gateway.deposit(this.currentUser.walletAddress, amount)
+      .subscribe({
+         next: () => {
+           this.showWalletAction = false;
+           this.fetchWallet();
+         },
+         error: err => {
+           alert('Nạp tiền thất bại: ' + err);
+         }
+      });
   }
 
   toggleCollapse() {

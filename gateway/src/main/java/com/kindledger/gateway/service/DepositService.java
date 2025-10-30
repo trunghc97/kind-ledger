@@ -29,7 +29,6 @@ public class DepositService {
 
     public DepositResponse deposit(DepositRequest req) {
         Assert.notNull(req.getWalletAddress(), "walletAddress required");
-        Assert.notNull(req.getAccountNumber(), "accountNumber required");
         Assert.notNull(req.getAmount(), "amount required");
         Assert.isTrue(req.getAmount().compareTo(BigDecimal.ZERO) > 0, "Invalid amount");
 
@@ -40,7 +39,7 @@ public class DepositService {
         }
 
         String txRef = "TX" + System.currentTimeMillis();
-        String tokenHash = HashUtil.sha256(req.getAccountNumber() + req.getAmount() + req.getWalletAddress() + txRef);
+        String tokenHash = HashUtil.sha256(req.getAmount() + req.getWalletAddress() + txRef);
         String status = "SUCCESS";
         String txId = null;
         String blockHash = null;
@@ -48,7 +47,7 @@ public class DepositService {
 
         try {
             // Step 1: mock bank transfer
-            BankTransferResult bankResult = bankMockService.transfer(req.getAccountNumber(), req.getAmount());
+            BankTransferResult bankResult = bankMockService.transfer(null, req.getAmount());
             if (!bankResult.success()) {
                 throw new RuntimeException("Bank transfer failed");
             }

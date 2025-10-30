@@ -38,12 +38,12 @@
       <ul class="navbar-nav">
         <!-- Wallet button -->
         <li class="nav-item" *ngIf="currentUser">
-          <button class="nav-link btn btn-outline-light me-2" (click)="openWalletAction()" [disabled]="loadingWallet">
+          <a class="nav-link btn btn-outline-light me-2" [routerLink]="walletActive ? '/deposit' : '/link-bank'" [class.disabled]="loadingWallet">
             <i class="fas fa-wallet me-1"></i>
-            Ví: <span class="fw-bold">{{ walletBalance | currency:'VND':'symbol':'1.0-0':'vi' }}</span>
+            Ví: <span class="fw-bold">{{ walletBalance | number:'1.0-0' }} VND</span>
             <span *ngIf="walletActive" class="badge bg-success text-white ms-2">Nạp tiền</span>
             <span *ngIf="!walletActive" class="badge bg-warning text-dark ms-2">Chờ liên kết</span>
-          </button>
+          </a>
         </li>
         <li class="nav-item" *ngIf="currentUser">
           <span class="nav-link">
@@ -58,33 +58,6 @@
           </a>
         </li>
       </ul>
-    </div>
-  </div>
-  <!-- Wallet overlay/modal quick action -->
-  <div *ngIf="showWalletAction" class="wallet-action-modal">
-    <div class="wallet-modal-bg" (click)="closeWalletAction()"></div>
-    <div class="wallet-modal-content">
-      <!-- Show link-bank or deposit form tuỳ trạng thái -->
-      <app-wallet-link-bank *ngIf="showLinkBank" (ngSubmit)="onLinkedBankSuccess()"></app-wallet-link-bank>
-      <ng-container *ngIf="!showLinkBank">
-        <div class="p-4 bg-white rounded">
-          <h3 class="mb-3">Nạp tiền vào ví</h3>
-          <form #depositForm="ngForm" (ngSubmit)="onDeposit()">
-            <div class="mb-3">
-              <label>Số tài khoản ngân hàng</label>
-              <input required name="accountNumber" ngModel class="form-control">
-            </div>
-            <div class="mb-3">
-              <label>Số tiền nạp (VND)</label>
-              <input required type="number" name="amount" ngModel min="1000" class="form-control">
-            </div>
-            <div class="text-end">
-              <button class="btn btn-secondary me-2" type="button" (click)="closeWalletAction()">Hủy</button>
-              <button class="btn btn-primary" type="submit">Nạp tiền</button>
-            </div>
-          </form>
-        </div>
-      </ng-container>
     </div>
   </div>
 </nav>

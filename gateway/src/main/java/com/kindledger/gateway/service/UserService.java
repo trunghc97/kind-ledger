@@ -3,6 +3,7 @@ package com.kindledger.gateway.service;
 import com.kindledger.gateway.entity.UserEntity;
 import com.kindledger.gateway.entity.WalletEntity;
 import com.kindledger.gateway.model.User;
+import com.kindledger.gateway.model.UserInfoDto;
 import com.kindledger.gateway.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +50,6 @@ public class UserService {
         // The UserEntity is still managed by the persistence context,
         // so changes will be flushed at the end of the transaction.
         WalletEntity wallet = walletService.createPendingWalletForUser(saved.getId(), "klw-" + UUID.randomUUID());
-        saved.setWalletId(wallet.getId());
 
         User user = new User();
         user.setId("user-" + saved.getId().toString());
@@ -88,5 +88,42 @@ public class UserService {
         user.setCreatedAt(entity.getCreatedAt() != null ? entity.getCreatedAt().format(formatter) : null);
         user.setUpdatedAt(entity.getUpdatedAt() != null ? entity.getUpdatedAt().format(formatter) : null);
         return user;
+    }
+
+    public UserInfoDto loginAndGetUserInfo(String username, String password) {
+        Optional<UserEntity> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("Invalid username or password");
+        }
+        UserEntity entity = userOpt.get();
+        if (!entity.getPasswordHash().equals(password)) {
+            throw new RuntimeException("Invalid username or password");
+        }
+        if (!UserEntity.UserStatus.ACTIVE.equals(entity.getStatus())) {
+            throw new RuntimeException("Account is not active");
+        }
+        entity.setLastLogin(LocalDateTime.now());
+        userRepository.save(entity);
+
+        String walletAddress = null;
+        String walletStatus = null;
+        try {
+            WalletEntity wallet = walletService.getByUserId(entity.getId());
+            if(wallet != null){
+                walletAddress = wallet.getAddress();
+                walletStatus = wallet.getStatus().name();
+            }
+        } catch (Exception ex) {
+            walletAddress = null;
+            walletStatus = null;
+        }
+        return new UserInfoDto(
+                "user-" + entity.getId().toString(),
+                entity.getUsername(),
+                entity.getEmail(),
+                entity.getRole().name(),
+                walletAddress,
+                walletStatus
+        );
     }
 }

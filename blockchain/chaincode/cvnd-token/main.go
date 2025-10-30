@@ -29,10 +29,19 @@ func (c *CvndTokenContract) Mint(ctx contractapi.TransactionContextInterface, wa
 	if err := ctx.GetStub().PutState(key, b); err != nil {
 		return err
 	}
-	if err := ctx.GetStub().PutState("balance_"+walletAddress, []byte(amount)); err != nil {
+	// Đọc số dư cũ
+	balanceKey := "balance_" + walletAddress
+	oldBytes, _ := ctx.GetStub().GetState(balanceKey)
+	var oldAmount float64 = 0
+	if oldBytes != nil {
+		fmt.Sscanf(string(oldBytes), "%f", &oldAmount)
+	}
+	var mintAmount float64
+	fmt.Sscanf(amount, "%f", &mintAmount)
+	newBalance := oldAmount + mintAmount
+	if err := ctx.GetStub().PutState(balanceKey, []byte(fmt.Sprintf("%.6f", newBalance))); err != nil {
 		return err
 	}
-	// Emit chaincode event for off-chain indexers (Explorer/Mongo ingestor)
 	_ = ctx.GetStub().SetEvent("Mint", b)
 	return nil
 }

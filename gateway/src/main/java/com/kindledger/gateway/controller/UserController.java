@@ -65,9 +65,10 @@ public class UserController {
     public ResponseEntity<?> getWalletBalance(@PathVariable("address") String address) {
         try {
             var wallet = walletService.getByAddress(address);
+            java.math.BigDecimal blockchainBalance = walletService.getBlockchainBalance(address);
             return ResponseEntity.ok(Map.of(
                 "address", wallet.getAddress(),
-                "cVndBalance", wallet.getBalance(),
+                "cVndBalance", blockchainBalance,
                 "status", wallet.getStatus()
             ));
         } catch (Exception e) {

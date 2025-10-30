@@ -1,0 +1,14 @@
+<div class="deposit-container">
+  <h2 class="deposit-title">Nạp tiền vào ví</h2>
+  <form (ngSubmit)="submitDeposit()" #form="ngForm" class="deposit-form">
+    <div class="mb-3">
+      <label class="form-label">Số tiền cần nạp (VND)</label>
+      <input class="form-control big-input" type="number" min="1000" [(ngModel)]="amount" name="amount" required [disabled]="loading" />
+    </div>
+    <div class="mb-3 text-danger" *ngIf="errorMsg">{{ errorMsg }}</div>
+    <button type="submit" class="btn btn-primary w-100" [disabled]="loading">
+      <span *ngIf="!loading">Nạp tiền</span>
+      <span *ngIf="loading"><i class="fas fa-spinner fa-spin"></i> Đang xử lý…</span>
+    </button>
+  </form>
+</div>
