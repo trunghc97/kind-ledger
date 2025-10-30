@@ -2,23 +2,30 @@ const express = require('express');
 const { Gateway, Wallets } = require('fabric-network');
 const path = require('path');
 const fs = require('fs');
+const { MongoClient } = require('mongodb');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://kindledger:kindledger123@mongodb:27017/kindledger?authSource=admin';
 
 // Middleware
 app.use(express.json());
 app.use(express.static('public'));
 
 // Fabric configuration
-const CHANNEL_NAME = 'kindchannel';
-const CHAINCODE_NAME = 'kindledgercc';
-const WALLET_PATH = path.join(__dirname, 'wallet');
-const CONNECTION_PROFILE_PATH = path.join(__dirname, '..', 'blockchain', 'config', 'connection-profile.yaml');
+const CHANNEL_NAME = process.env.CHANNEL_NAME || 'kindchannel';
+const CHAINCODE_NAME = process.env.CHAINCODE_NAME || 'cvnd-token';
+const WALLET_PATH = process.env.WALLET_PATH || '/opt/gopath/src/github.com/hyperledger/fabric/peer/explorer-wallet';
+const CONNECTION_PROFILE_PATH = process.env.CONNECTION_PROFILE || '/opt/gopath/src/github.com/hyperledger/fabric/peer/config/connection-profile.yaml';
+const MSP_ID = process.env.MSP_ID || 'MBBankMSP';
+const ADMIN_LABEL = process.env.ADMIN_IDENTITY || 'Admin@mb.kindledger.com';
+const ADMIN_MSP_BASE = process.env.ADMIN_MSP_BASE || '/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp';
 
 let gateway;
 let network;
 let contract;
+let mongo;
+let db;
 
 // Initialize Fabric connection
 async function initFabric() {
@@ -32,18 +39,42 @@ async function initFabric() {
         const wallet = await Wallets.newFileSystemWallet(WALLET_PATH);
         
         // Check if user exists
-        const userExists = await wallet.exists('Admin@mb.kindledger.com');
+        const label = ADMIN_LABEL;
+        let userExists = await wallet.get(label);
         if (!userExists) {
-            console.error('User Admin@mb.kindledger.com not found in wallet');
-            return;
+            // Try to import from flat .id file if present
+            try {
+                const idFile = path.join(WALLET_PATH, `${label}.id`);
+                if (fs.existsSync(idFile)) {
+                    const raw = fs.readFileSync(idFile, 'utf8');
+                    const idJson = JSON.parse(raw);
+                    await wallet.put(label, idJson);
+                    userExists = await wallet.get(label);
+                } else {
+                    // Fallback: construct X.509 identity from mounted crypto-config
+                    const certPath = path.join(ADMIN_MSP_BASE, 'signcerts');
+                    const keyPath = path.join(ADMIN_MSP_BASE, 'keystore');
+                    const certFiles = fs.existsSync(certPath) ? fs.readdirSync(certPath).filter(f => f.endsWith('.pem')) : [];
+                    const keyFiles = fs.existsSync(keyPath) ? fs.readdirSync(keyPath) : [];
+                    if (!certFiles.length || !keyFiles.length) throw new Error('MSP cert/key not found');
+                    const certificate = fs.readFileSync(path.join(certPath, certFiles[0]), 'utf8');
+                    const privateKey = fs.readFileSync(path.join(keyPath, keyFiles[0]), 'utf8');
+                    const identity = { credentials: { certificate, privateKey }, mspId: MSP_ID, type: 'X.509' };
+                    await wallet.put(label, identity);
+                    userExists = await wallet.get(label);
+                }
+            } catch (e) {
+                console.error('User Admin@mb.kindledger.com not found and import failed:', e.message);
+                return;
+            }
         }
         
         // Create gateway
         gateway = new Gateway();
         await gateway.connect(connectionProfile, {
             wallet,
-            identity: 'Admin@mb.kindledger.com',
-            discovery: { enabled: true, asLocalhost: true }
+            identity: label,
+            discovery: { enabled: false, asLocalhost: false }
         });
         
         // Get network and contract
@@ -54,6 +85,76 @@ async function initFabric() {
     } catch (error) {
         console.error('Failed to initialize Fabric connection:', error);
     }
+}
+
+// Initialize Mongo connection
+async function initMongo() {
+    try {
+        console.log('Connecting MongoDB...');
+        mongo = new MongoClient(MONGODB_URI, { maxPoolSize: 10 });
+        await mongo.connect();
+        db = mongo.db();
+        // Create indexes (idempotent)
+        await db.collection('blocks').createIndex({ number: 1 }, { unique: true });
+        await db.collection('transactions_ledger').createIndex({ txId: 1 }, { unique: true });
+        await db.collection('chaincode_events').createIndex({ txId: 1 });
+        console.log('MongoDB connected');
+    } catch (err) {
+        console.error('MongoDB connection failed:', err.message);
+    }
+}
+
+// Register block listener to persist ledger events to Mongo
+async function registerBlockListener() {
+    if (!network || !db) return;
+    const channel = network.getChannel();
+    await network.addBlockListener(async (blockEvent) => {
+        try {
+            const blockNumber = parseInt(blockEvent.blockNumber);
+            const blockHash = blockEvent.blockData.header.data_hash?.toString('hex');
+            const previousHash = blockEvent.blockData.header.previous_hash?.toString('hex');
+            const txs = [];
+            const events = [];
+
+            for (const txEvent of blockEvent.getTransactionEvents()) {
+                const txId = txEvent.transactionId;
+                const status = txEvent.status;
+                const validationCode = txEvent.validationCode;
+                let chaincodeId = null;
+                if (txEvent.chaincodeId) chaincodeId = txEvent.chaincodeId;
+                txs.push({ txId, status, validationCode, chaincodeId, blockNumber });
+
+                // Chaincode events (if any)
+                const ccEvents = txEvent.getContractEvents();
+                for (const ev of ccEvents) {
+                    events.push({
+                        txId,
+                        chaincodeId: ev.chaincodeId,
+                        eventName: ev.eventName,
+                        payload: ev.payload ? ev.payload.toString('utf8') : null,
+                        blockNumber,
+                    });
+                }
+            }
+
+            // Upsert block
+            await db.collection('blocks').updateOne(
+                { number: blockNumber },
+                { $set: { number: blockNumber, blockHash, previousHash, transactionCount: txs.length, ts: new Date() } },
+                { upsert: true }
+            );
+
+            // Insert txs (ignore duplicates)
+            if (txs.length) {
+                try { await db.collection('transactions_ledger').insertMany(txs, { ordered: false }); } catch (_) {}
+            }
+            if (events.length) {
+                try { await db.collection('chaincode_events').insertMany(events, { ordered: false }); } catch (_) {}
+            }
+        } catch (err) {
+            console.error('Block listener error:', err.message);
+        }
+    }, { startBlock: 'newest' });
 }
 
 // API Routes
@@ -159,71 +260,34 @@ app.get('/api/campaigns/:id/history', async (req, res) => {
 // Get blockchain info
 app.get('/api/blockchain/info', async (req, res) => {
     try {
-        if (!network) {
-            return res.status(500).json({ error: 'Fabric connection not initialized' });
-        }
-        
-        const channel = network.getChannel();
-        const info = await channel.queryInfo();
-        
+        if (!db) return res.status(500).json({ error: 'Mongo not initialized' });
+        const last = await db.collection('blocks').find().sort({ number: -1 }).limit(1).toArray();
+        const height = last.length ? last[0].number + 1 : 0;
         res.json({
             success: true,
             data: {
-                height: info.height.toString(),
-                currentBlockHash: info.currentBlockHash.toString('hex'),
-                previousBlockHash: info.previousBlockHash.toString('hex'),
+                height: String(height),
+                currentBlockHash: last.length ? (last[0].blockHash || '') : '',
+                previousBlockHash: last.length ? (last[0].previousHash || '') : '',
                 timestamp: new Date().toISOString()
             }
         });
     } catch (error) {
-        console.error('Error getting blockchain info:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        console.error('Error getting blockchain info (mongo):', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
 // Get recent blocks
 app.get('/api/blocks', async (req, res) => {
     try {
-        if (!network) {
-            return res.status(500).json({ error: 'Fabric connection not initialized' });
-        }
-        
-        const channel = network.getChannel();
-        const info = await channel.queryInfo();
-        const height = parseInt(info.height.toString());
-        
-        const blocks = [];
-        const startBlock = Math.max(0, height - 10); // Get last 10 blocks
-        
-        for (let i = startBlock; i < height; i++) {
-            try {
-                const block = await channel.queryBlock(i);
-                blocks.push({
-                    blockNumber: i,
-                    blockHash: block.header.data_hash.toString('hex'),
-                    previousHash: block.header.previous_hash.toString('hex'),
-                    transactionCount: block.data.data.length,
-                    timestamp: new Date().toISOString()
-                });
-            } catch (err) {
-                console.warn(`Could not fetch block ${i}:`, err.message);
-            }
-        }
-        
-        res.json({
-            success: true,
-            data: blocks.reverse(), // Most recent first
-            timestamp: new Date().toISOString()
-        });
+        if (!db) return res.status(500).json({ error: 'Mongo not initialized' });
+        const limit = Math.min(parseInt(req.query.limit) || 10, 100);
+        const blocks = await db.collection('blocks').find().sort({ number: -1 }).limit(limit).toArray();
+        res.json({ success: true, data: blocks, timestamp: new Date().toISOString() });
     } catch (error) {
-        console.error('Error getting blocks:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        console.error('Error getting blocks (mongo):', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -253,7 +317,9 @@ app.use((err, req, res, next) => {
 
 // Start server
 async function startServer() {
+    await initMongo();
     await initFabric();
+    await registerBlockListener();
     
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`Kind-Ledger Explorer running on port ${PORT}`);
@@ -266,6 +332,9 @@ process.on('SIGINT', async () => {
     console.log('Shutting down gracefully...');
     if (gateway) {
         await gateway.disconnect();
+    }
+    if (mongo) {
+        await mongo.close().catch(() => {});
     }
     process.exit(0);
 });

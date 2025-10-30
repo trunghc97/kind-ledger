@@ -403,10 +403,14 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
+      MONGODB_URI: mongodb://kindledger:kindledger123@mongodb:27017/kindledger?authSource=admin
+      CHAINCODE_NAME: cvnd-token
+      CONNECTION_PROFILE: /opt/gopath/src/github.com/hyperledger/fabric/peer/config/connection-profile.yaml
+      WALLET_PATH: /opt/gopath/src/github.com/hyperledger/fabric/peer/explorer-wallet
     volumes:
       - ./blockchain/crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto
       - ./blockchain/config:/opt/gopath/src/github.com/hyperledger/fabric/peer/config
-      - ./explorer/wallet:/opt/gopath/src/github.com/hyperledger/fabric/peer/wallet
+      - ./explorer/wallet:/opt/gopath/src/github.com/hyperledger/fabric/peer/explorer-wallet
       # - ./data/node_modules_explorer:/app/node_modules  # Temporarily disabled
     depends_on:
       - orderer

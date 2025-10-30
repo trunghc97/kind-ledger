@@ -355,6 +355,31 @@ sequenceDiagram
     GW-->>U: 200 OK + campaign details
 ```
 
+### 4.1.1 Explorer -> Mongo Ledger Flow (Read Only)
+
+```mermaid
+sequenceDiagram
+    participant EX as Explorer
+    participant BC as Blockchain
+    participant MG as MongoDB
+
+    EX->>BC: Subscribe block events (startBlock=newest)
+    BC-->>EX: BlockEvent{ blockNumber, txs, ccEvents }
+    EX->>MG: Upsert blocks(number, hash, prev)
+    EX->>MG: InsertMany transactions_ledger(txId, status, blockNumber)
+    EX->>MG: InsertMany chaincode_events(txId, eventName, payload, blockNumber)
+```
+
+Nguyên tắc bất biến:
+- Chỉ Explorer ghi 3 collection: `blocks`, `transactions_ledger`, `chaincode_events`.
+- Ghi idempotent, không cập nhật/xóa.
+- Gateway/Frontend chỉ đọc qua các API Explorer.
+
+Endpoint Explorer (đọc từ Mongo):
+- GET `/api/blockchain/info` → tính height từ `blocks` (max(number)+1)
+- GET `/api/blocks?limit=N` → đọc `blocks` sort number desc
+- Tương lai: GET `/api/tx/{txId}` → đọc `transactions_ledger` và sự kiện liên quan
+
 #### GET /api/campaigns/{id}
 
 **Description**: Lấy thông tin chi tiết của campaign

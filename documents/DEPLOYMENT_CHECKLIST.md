@@ -253,3 +253,146 @@ docker restart fabric-tools && \
 cd blockchain/scripts && ./create_channel.sh && ./deploy_cvnd_token.sh
 ```
 
+
+## 9. Checklist nhanh để deploy trên máy khác (KHÔNG LỖI)
+
+```bash
+# 0) Yêu cầu môi trường
+# - Docker Desktop/Engine 20.10+; Docker Compose V2 (dùng lệnh `docker compose`)
+# - Java 17+, Node 16+, Python 3.x
+
+# 1) Clone repo và vào thư mục dự án
+cd /Users/iteazy/Documents/Projects && \
+git clone <repository-url> kind-ledger && \
+cd /Users/iteazy/Documents/Projects/kind-ledger
+
+# 2) Khởi tạo toàn bộ (tự động crypto, artifacts, ví, compose, explorer, gateway)
+bash /Users/iteazy/Documents/Projects/kind-ledger/setup.sh
+
+# Nếu đã từng chạy và muốn chạy mới hoàn toàn
+rm -f /Users/iteazy/Documents/Projects/kind-ledger/.init-completed && \
+bash /Users/iteazy/Documents/Projects/kind-ledger/setup.sh
+
+# 3) Tạo channel + cài đặt chaincode cvnd-token trên TẤT CẢ peers
+cd /Users/iteazy/Documents/Projects/kind-ledger/blockchain/scripts && \
+./create_channel.sh && \
+./deploy_cvnd_token.sh
+
+# 4) Kiểm tra orderer đã có IP và DNS resolve được từ fabric-tools
+docker inspect -f '{{json .NetworkSettings.Networks}}' orderer.kindledger.com && \
+docker exec fabric-tools bash -lc 'getent hosts orderer || getent hosts orderer.kindledger.com'
+
+# 5) Verify chaincode đã install trên 4 org
+for ORG in mb charity supplier auditor; do \
+  docker exec fabric-tools bash -lc \
+  "export CORE_PEER_LOCALMSPID=$(tr '[:lower:]' '[:upper:]' <<< ${ORG})MSP; \
+   export CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/${ORG}.kindledger.com/users/Admin@${ORG}.kindledger.com/msp; \
+   export CORE_PEER_ADDRESS=peer0.${ORG}.kindledger.com:7051; \
+   export CORE_PEER_TLS_ENABLED=true; \
+   export CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/${ORG}.kindledger.com/peers/peer0.${ORG}.kindledger.com/tls/ca.crt; \
+   peer lifecycle chaincode queryinstalled"; \
+done
+
+# 6) Gọi API deposit để xác nhận TX thật
+curl -sS -X POST http://localhost:8080/api/v1/deposit \
+  -H 'Content-Type: application/json' \
+  -d '{"accountNumber":"1234567898","amount":500000,"walletAddress":"wallet-mb-003"}'
+
+# 7) Kiểm tra số dư trên chain (BalanceOf)
+docker exec fabric-tools bash -lc \
+  'export CORE_PEER_LOCALMSPID=MBBankMSP; \
+   export CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp; \
+   export CORE_PEER_ADDRESS=peer0.mb.kindledger.com:7051; \
+   export CORE_PEER_TLS_ENABLED=true; \
+   export CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt; \
+   peer chaincode query -C kindchannel -n cvnd-token -c '\''{"function":"BalanceOf","Args":["wallet-mb-003"]}'\'''
+```
+
+
+## 10. Reset sạch khi đổi máy/môi trường (an toàn, không chạm code)
+
+```bash
+cd /Users/iteazy/Documents/Projects/kind-ledger
+
+# Dừng và xóa containers (giữ data nội bộ dự án nếu cần)
+docker compose down -v || true
+
+# Làm sạch network có thể bị lỗi DNS
+docker network rm kindledger_fabric-net || true
+
+# Xóa flag init để setup lại từ đầu
+rm -f .init-completed
+
+# Khởi động lại toàn bộ
+bash setup.sh
+
+# Tạo channel + deploy lại chaincode
+cd /Users/iteazy/Documents/Projects/kind-ledger/blockchain/scripts
+./create_channel.sh
+./deploy_cvnd_token.sh
+```
+
+
+## 11. Lỗi thường gặp và các FIX đã áp dụng
+
+- "chaincode not installed" hoặc "proposal failed on peer"/"bad endorsement":
+  - FIX: `deploy_cvnd_token.sh` cài chaincode trên 4 peers (MBBank/Charity/Supplier/Auditor). Chạy lại script nếu thiếu.
+
+- "discovery service disabled or not available":
+  - FIX: Đã tắt discovery trong `BlockchainService` và `FabricService` (`discovery(false)`). Sử dụng cấu hình tĩnh từ `connection-profile.yaml`.
+
+- Lỗi TLS/hostname mismatch khi tạo channel/commit: "TLS handshake failed", "x509: certificate is valid for ...":
+  - FIX: Hostname orderer dùng `orderer.orderer.kindledger.com` trong `configtx.yaml` và `--ordererTLSHostnameOverride` ở lệnh `peer`.
+
+- "lookup orderer on 127.0.0.11:53: no such host" (DNS):
+  - FIX: Khởi động lại network theo mục 8; đảm bảo container `orderer.kindledger.com` có IP trong `kindledger_fabric-net`; restart `fabric-tools` để làm mới DNS.
+
+- "cannot get signing identity from wallet" hoặc ví thiếu:
+  - FIX: `setup.sh` tạo wallet tự động cho Gateway/Explorer. Nếu lỗi, xóa thư mục `gateway/wallet/` hoặc `explorer/wallet/` rồi chạy lại `setup.sh`.
+
+- "Channel already exists" khi tạo channel:
+  - FIX: `FabricService` có retry/handling. Có thể bỏ qua nếu channel đã tồn tại; tiếp tục join, update anchor và deploy chaincode.
+
+- Peers không đạt policy Readers/Deliver timeout khi approve/commit:
+  - FIX: `EnableNodeOUs: true` trong `crypto-config.yaml` và có `config.yaml` cho từng MSP.
+
+- Endorsement policy fail do org chưa join channel:
+  - FIX: Chạy `create_channel.sh` để join đủ 4 org; sau đó deploy chaincode.
+
+- Port bận (8080, 7051, 7050...):
+  - FIX: Đảm bảo không có dịch vụ khác dùng port; đổi port trong `docker-compose.yml` nếu cần rồi `docker compose up -d`.
+
+
+## 12. Bộ lệnh VERIFY nhanh sau deploy
+
+```bash
+# 1) Kiểm tra trạng thái containers
+docker ps --format '{{.Names}}\t{{.Status}}' | egrep 'orderer|peer0|gateway|explorer|couchdb|fabric-tools'
+
+# 2) Kiểm tra channel `kindchannel` tồn tại và peers đã join
+docker exec fabric-tools bash -lc 'peer channel list'
+
+# 3) Kiểm tra installed chaincode trên từng org
+for ORG in mb charity supplier auditor; do \
+  echo "=== INSTALLED on ${ORG} ==="; \
+  docker exec fabric-tools bash -lc \
+  "export CORE_PEER_LOCALMSPID=$(tr '[:lower:]' '[:upper:]' <<< ${ORG})MSP; \
+   export CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/${ORG}.kindledger.com/users/Admin@${ORG}.kindledger.com/msp; \
+   export CORE_PEER_ADDRESS=peer0.${ORG}.kindledger.com:7051; \
+   export CORE_PEER_TLS_ENABLED=true; \
+   export CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/${ORG}.kindledger.com/peers/peer0.${ORG}.kindledger.com/tls/ca.crt; \
+   peer lifecycle chaincode queryinstalled"; \
+done
+
+# 4) Kiểm tra committed chaincode trên channel
+docker exec fabric-tools bash -lc 'peer lifecycle chaincode querycommitted -C kindchannel'
+
+# 5) Gọi thử đọc số dư
+docker exec fabric-tools bash -lc \
+  'export CORE_PEER_LOCALMSPID=MBBankMSP; \
+   export CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp; \
+   export CORE_PEER_ADDRESS=peer0.mb.kindledger.com:7051; \
+   export CORE_PEER_TLS_ENABLED=true; \
+   export CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt; \
+   peer chaincode query -C kindchannel -n cvnd-token -c '\''{"function":"BalanceOf","Args":["wallet-mb-003"]}'\'''
+```

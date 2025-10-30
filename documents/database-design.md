@@ -412,6 +412,48 @@ db.system_logs.createIndex({ "request_id": 1 })
 db.system_logs.createIndex({ "timestamp": 1 }, { expireAfterSeconds: 2592000 }) // 30 days TTL
 ```
 
+### 3.5 Ledger Collections (Đồng bộ từ Blockchain - Read Only)
+
+Các collection dưới đây được Explorer đồng bộ trực tiếp từ Hyperledger Fabric. Dữ liệu bất biến (append-only) và chỉ được ghi bởi listener từ Fabric. Ứng dụng khác chỉ được đọc.
+
+- blocks
+  - Fields: number (unique), blockHash, previousHash, transactionCount, ts
+  - Indexes: { number: 1 } (unique)
+- transactions_ledger
+  - Fields: txId (unique), status, validationCode, chaincodeId, blockNumber
+  - Indexes: { txId: 1 } (unique), { blockNumber: 1 }
+- chaincode_events
+  - Fields: txId, chaincodeId, eventName, payload, blockNumber
+  - Indexes: { txId: 1 }, { eventName: 1, blockNumber: -1 }
+
+Quy tắc bất biến và nhất quán:
+- Không có API nào ghi vào 3 collection này ngoài Explorer listener.
+- Ghi idempotent: upsert block theo number; insertMany với ordered=false để bỏ qua trùng lặp.
+- Không hỗ trợ cập nhật/xóa.
+- Mỗi txId trong chaincode_events phải tồn tại trong transactions_ledger cùng blockNumber.
+
+Truy vấn mẫu (đọc-an-toàn):
+```javascript
+// Chiều cao chuỗi khối (height)
+const last = db.blocks.find().sort({ number: -1 }).limit(1).toArray();
+const height = last.length ? last[0].number + 1 : 0;
+
+// 10 block gần nhất
+db.blocks.find().sort({ number: -1 }).limit(10)
+
+// Giao dịch theo txId
+db.transactions_ledger.findOne({ txId: "<TX_ID>" })
+
+// Sự kiện Mint mới nhất
+db.chaincode_events.find({ eventName: "Mint" }).sort({ blockNumber: -1 }).limit(5)
+
+// Kiểm tra chéo sự kiện có tx tương ứng
+db.chaincode_events.aggregate([
+  { $lookup: { from: "transactions_ledger", localField: "txId", foreignField: "txId", as: "tx" } },
+  { $match: { tx: { $size: 0 } } }
+])
+```
+
 ---
 
 ## 4. Redis Cache Strategy

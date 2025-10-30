@@ -32,9 +32,14 @@ import json
 import time
 import sys
 from typing import Dict, Any, Optional
+try:
+    from pymongo import MongoClient  # optional
+except Exception:
+    MongoClient = None
 
 # Configuration
 BASE_URL = "http://localhost:8080/api"
+EXPLORER_URL = "http://localhost:3000/api"
 TIMEOUT = 30
 
 # Colors for output
@@ -147,6 +152,30 @@ def make_request(method: str, endpoint: str, data: Optional[Dict] = None, header
             "error": str(e),
             "body": ""
         }
+
+def make_explorer_request(method: str, endpoint: str, data: Optional[Dict] = None, headers: Optional[Dict] = None) -> Dict[str, Any]:
+    """HTTP request against Explorer service."""
+    url = f"{EXPLORER_URL}{endpoint}"
+    try:
+        if method.upper() == "GET":
+            response = requests.get(url, headers=headers, timeout=TIMEOUT)
+        elif method.upper() == "POST":
+            response = requests.post(url, json=data, headers=headers, timeout=TIMEOUT)
+        else:
+            raise ValueError(f"Unsupported method: {method}")
+
+        result = {
+            "status_code": response.status_code,
+            "headers": dict(response.headers),
+            "body": response.text
+        }
+        try:
+            result["json"] = response.json()
+        except:
+            pass
+        return result
+    except Exception as e:
+        return {"status_code": 0, "error": str(e), "body": ""}
 
 def test_health_check():
     """Test 1: Health check endpoint"""
@@ -613,6 +642,13 @@ def test_full_workflow():
     # Test 9: Get total donations
     test_get_total_donations()
     
+    # Test 10: Deposit and Mongo trace (optional Mongo)
+    test_deposit_and_balance()
+
+    # Test 11: Explorer endpoints (optional)
+    test_explorer_blockchain_info()
+    test_explorer_recent_blocks()
+
     return True
 
 def print_summary():
@@ -634,6 +670,102 @@ def print_summary():
     else:
         print(f"{Colors.FAIL}{Colors.BOLD}Some tests failed ✗{Colors.ENDC}")
         print(f"\n{Colors.WARNING}Note: Some failures may be expected if blockchain is not fully configured.{Colors.ENDC}")
+
+
+# Early definition to ensure availability before main() is called
+def test_deposit_and_balance(amount: float = 12345.0, wallet: str = "wallet-mb-003"):
+    """Deposit via /v1/deposit and verify txId; then try to check wallet balance via API if available."""
+
+    def func():
+        # 1) Call deposit API
+        deposit_data = {
+            "accountNumber": "1234567898",
+            "amount": amount,
+            "walletAddress": wallet,
+        }
+        result = make_request("POST", "/v1/deposit", deposit_data)
+
+        if result.get("json"):
+            tx_json = result["json"]
+            tx_id = tx_json.get("txId")
+            print_info(f"Deposit txId: {tx_id}")
+            if not tx_id or str(tx_id).startswith("FALLBACK"):
+                result["status_code"] = 400
+                result["error"] = "Missing or FALLBACK txId"
+                return result
+
+            # 2) Try to check balance via possible API endpoints
+            balance = None
+            for ep, method in [("/v1/balance", "POST"), (f"/v1/balance/{wallet}", "GET"), ("/v1/wallet/balance", "POST")]:
+                try:
+                    if method == "POST":
+                        resp = make_request("POST", ep, {"walletAddress": wallet})
+                    else:
+                        resp = make_request("GET", ep)
+
+                    if resp.get("status_code") == 200 and resp.get("json"):
+                        j = resp["json"]
+                        if isinstance(j, dict):
+                            for key in ["balance", "data", "amount", "value"]:
+                                val = j.get(key)
+                                try:
+                                    if isinstance(val, (int, float)):
+                                        balance = float(val)
+                                        break
+                                    if isinstance(val, str):
+                                        balance = float(val)
+                                        break
+                                except Exception:
+                                    pass
+                    if balance is not None:
+                        break
+                except Exception:
+                    continue
+
+            if balance is not None:
+                print_info(f"Wallet {wallet} balance: {balance}")
+                if balance < amount:
+                    print_warning("Balance endpoint returned less than deposited amount; endpoint may reflect prior state")
+
+            # 3) Check Mongo for chaincode events and tx indexing (optional)
+            if MongoClient is not None:
+                try:
+                    # give listener some time
+                    time.sleep(2)
+                    client = MongoClient(
+                        "mongodb://kindledger:kindledger123@localhost:27017/kindledger?authSource=admin",
+                        serverSelectionTimeoutMS=2000,
+                    )
+                    db = client.get_database("kindledger")
+                    ev = db.get_collection("chaincode_events").find_one({"txId": tx_id})
+                    tx = db.get_collection("transactions_ledger").find_one({"txId": tx_id})
+                    if ev:
+                        print_info("Mongo chaincode_events has txId")
+                    else:
+                        print_warning("Mongo chaincode_events missing txId (listener may be catching up)")
+                    if tx:
+                        print_info("Mongo transactions_ledger has txId")
+                    else:
+                        print_warning("Mongo transactions_ledger missing txId")
+                except Exception as e:
+                    print_warning(f"Mongo verification skipped: {e}")
+
+        return result
+
+    return test_api("Deposit and Balance Check", func)
+
+
+def test_explorer_blockchain_info():
+    """Query Explorer blockchain info."""
+    def func():
+        return make_explorer_request("GET", "/blockchain/info")
+    return test_api("Explorer Blockchain Info", func)
+
+def test_explorer_recent_blocks():
+    """Query Explorer recent blocks."""
+    def func():
+        return make_explorer_request("GET", "/blocks")
+    return test_api("Explorer Recent Blocks", func)
 
 def main():
     """Main function"""
@@ -697,3 +829,65 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# ---------------------- New Tests: Deposit + Balance Check ----------------------
+def test_deposit_and_balance(amount: float = 12345.0, wallet: str = "wallet-mb-003"):
+    """Deposit via /v1/deposit and verify txId; then try to check wallet balance via API if available."""
+
+    def func():
+        # 1) Call deposit API
+        deposit_data = {
+            "accountNumber": "1234567898",
+            "amount": amount,
+            "walletAddress": wallet,
+        }
+        result = make_request("POST", "/v1/deposit", deposit_data)
+
+        if result.get("json"):
+            tx_json = result["json"]
+            tx_id = tx_json.get("txId")
+            print_info(f"Deposit txId: {tx_id}")
+            if not tx_id or str(tx_id).startswith("FALLBACK"):
+                result["status_code"] = 400
+                result["error"] = "Missing or FALLBACK txId"
+                return result
+
+            # 2) Try to check balance via possible API endpoints
+            # Attempt POST /v1/balance { walletAddress }
+            balance = None
+            for ep, method in [("/v1/balance", "POST"), (f"/v1/balance/{wallet}", "GET"), ("/v1/wallet/balance", "POST")]:
+                try:
+                    if method == "POST":
+                        resp = make_request("POST", ep, {"walletAddress": wallet})
+                    else:
+                        resp = make_request("GET", ep)
+
+                    if resp.get("status_code") == 200 and resp.get("json"):
+                        j = resp["json"]
+                        # heuristics for balance field
+                        if isinstance(j, dict):
+                            for key in ["balance", "data", "amount", "value"]:
+                                val = j.get(key)
+                                try:
+                                    if isinstance(val, (int, float)):
+                                        balance = float(val)
+                                        break
+                                    if isinstance(val, str):
+                                        balance = float(val)
+                                        break
+                                except Exception:
+                                    pass
+                    if balance is not None:
+                        break
+                except Exception:
+                    continue
+
+            if balance is not None:
+                print_info(f"Wallet {wallet} balance: {balance}")
+                if balance < amount:
+                    print_warning("Balance endpoint returned less than deposited amount; endpoint may reflect prior state")
+
+        return result
+
+    return test_api("Deposit and Balance Check", func)
