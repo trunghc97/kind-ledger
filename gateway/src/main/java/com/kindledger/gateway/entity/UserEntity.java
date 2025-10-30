@@ -1,7 +1,10 @@
 package com.kindledger.gateway.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -45,8 +48,9 @@ public class UserEntity {
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
     
-    @Column(name = "metadata", columnDefinition = "text")
-    private String metadata;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "metadata", columnDefinition = "jsonb")
+    private Map<String, Object> metadata;
 
     @Column(name = "wallet_id", columnDefinition = "uuid")
     private UUID walletId;
@@ -156,11 +160,11 @@ public class UserEntity {
         this.lastLogin = lastLogin;
     }
     
-    public String getMetadata() {
+    public Map<String, Object> getMetadata() {
         return metadata;
     }
     
-    public void setMetadata(String metadata) {
+    public void setMetadata(Map<String, Object> metadata) {
         this.metadata = metadata;
     }
 
