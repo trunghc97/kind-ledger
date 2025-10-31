@@ -5,6 +5,7 @@ import com.kindledger.gateway.model.LinkBankRequest;
 import com.kindledger.gateway.repository.UserRepository;
 import com.kindledger.gateway.service.BankMockService;
 import com.kindledger.gateway.service.WalletService;
+import com.kindledger.gateway.service.SessionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -24,9 +25,10 @@ public class UserController {
     private final UserRepository userRepository;
     private final BankMockService bankMockService;
     private final WalletService walletService;
+    private final SessionService sessionService;
 
-    @PostMapping("/users/{id}/link-bank")
-    public ResponseEntity<Map<String, Object>> linkBank(@PathVariable("id") String id,
+    @PostMapping("/link-bank")
+    public ResponseEntity<Map<String, Object>> linkBank(@RequestHeader(value = "Authorization", required = false) String authorization,
                                                         @RequestBody LinkBankRequest request) {
         String acc = request.getAccountNumber();
         if (acc == null || acc.trim().isEmpty()) {
@@ -35,8 +37,7 @@ public class UserController {
                     "message", "accountNumber required"
             ));
         }
-
-        UUID userUuid = parseUserId(id);
+        UUID userUuid = resolveUserIdFromAuth(authorization);
         Optional<UserEntity> userOpt = userRepository.findById(userUuid);
         if (userOpt.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -81,5 +82,26 @@ public class UserController {
             return UUID.fromString(id.substring(5));
         }
         return UUID.fromString(id);
+    }
+
+    private UUID resolveUserIdFromAuth(String authorization) {
+        if (authorization == null || authorization.isBlank()) {
+            throw new IllegalArgumentException("Missing Authorization header");
+        }
+        String token = authorization.trim();
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7).trim();
+        }
+        if (token.equalsIgnoreCase("undefined") || token.equalsIgnoreCase("null") || token.isEmpty()) {
+            throw new IllegalArgumentException("Invalid Authorization token");
+        }
+        // Ưu tiên lấy từ session đăng nhập
+        UUID fromSession = sessionService.getUserId(token);
+        if (fromSession != null) return fromSession;
+        // Accept either raw UUID, or prefixed with user-
+        if (token.startsWith("user-")) {
+            return parseUserId(token);
+        }
+        return UUID.fromString(token);
     }
 }

@@ -22,9 +22,7 @@ export class WalletLinkBankComponent {
       return;
     }
     this.loading = true;
-    const walletAddress = this.auth.getCurrentUser()?.walletAddress;
-    if (!walletAddress) { this.errorMsg = 'Không tìm thấy ví'; this.loading = false; return; }
-    this.gateway.linkBank(walletAddress, this.accountNumber).subscribe({
+    this.gateway.linkBank(this.accountNumber).subscribe({
       next: () => {
         this.loading = false;
         this.router.navigate(['/']);

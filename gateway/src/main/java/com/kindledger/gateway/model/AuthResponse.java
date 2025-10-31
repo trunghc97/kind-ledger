@@ -7,7 +7,7 @@ public class AuthResponse {
     private String email;
     private String fullName;
     private String role;
-    private String walletId;
+    private String walletAddres;
     private String walletStatus;
 
     // Constructors
@@ -21,7 +21,7 @@ public class AuthResponse {
         this.email = email;
         this.fullName = fullName;
         this.role = role;
-        this.walletId = walletId;
+        this.walletAddres = walletAddres;
         this.walletStatus = walletStatus;
     }
 
@@ -74,12 +74,12 @@ public class AuthResponse {
         this.role = role;
     }
 
-    public String getWalletId() {
-        return walletId;
+    public String getWalletAddress() {
+        return walletAddres;
     }
 
-    public void setWalletId(String walletId) {
-        this.walletId = walletId;
+    public void setWalletAddress(String walletAddres) {
+        this.walletAddres = walletAddres;
     }
 
     public String getWalletStatus() {

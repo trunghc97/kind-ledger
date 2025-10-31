@@ -8,6 +8,7 @@ import com.kindledger.gateway.model.User;
 import com.kindledger.gateway.model.UserInfoDto;
 import com.kindledger.gateway.service.UserService;
 import com.kindledger.gateway.service.WalletService;
+import com.kindledger.gateway.service.SessionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,9 @@ public class AuthenticationController {
 
     @Autowired
     private WalletService walletService;
+
+    @Autowired
+    private SessionService sessionService;
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@RequestBody RegisterRequest request) {
@@ -70,6 +74,14 @@ public class AuthenticationController {
             authResponse.setFullName(user.getFullName());
             authResponse.setRole(user.getRole());
 
+            // Lưu session: token -> userId (UUID)
+            try {
+                String userIdStr = user.getId(); // dạng "user-<uuid>"
+                UUID userUuid = userIdStr != null && userIdStr.startsWith("user-")
+                        ? UUID.fromString(userIdStr.substring(5)) : UUID.fromString(userIdStr);
+                sessionService.store(token.startsWith("Bearer ") ? token.substring(7) : token, userUuid);
+            } catch (Exception ignore) {}
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "User registered successfully");
@@ -100,9 +112,32 @@ public class AuthenticationController {
             if (request.getPassword() == null || request.getPassword().trim().isEmpty())
                 return createErrorResponse("Password is required");
             UserInfoDto userInfo = userService.loginAndGetUserInfo(request.getUsername(), request.getPassword());
+
+            // Generate token
+            String token = "Bearer " + UUID.randomUUID().toString();
+
+            // Build auth response
+            AuthResponse authResponse = new AuthResponse();
+            authResponse.setToken(token);
+            authResponse.setUserId(userInfo.getUserId());
+            authResponse.setUsername(userInfo.getUsername());
+            authResponse.setEmail(userInfo.getEmail());
+            authResponse.setFullName(userInfo.getUsername());
+            authResponse.setRole(userInfo.getRole());
+            authResponse.setWalletAddress(userInfo.getWalletAddress());
+            authResponse.setWalletStatus(userInfo.getWalletStatus());
+
+            // Store session mapping
+            try {
+                String userIdStr = userInfo.getUserId(); // user-<uuid>
+                UUID userUuid = userIdStr != null && userIdStr.startsWith("user-")
+                        ? UUID.fromString(userIdStr.substring(5)) : UUID.fromString(userIdStr);
+                sessionService.store(token.substring(7), userUuid);
+            } catch (Exception ignore) {}
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("data", userInfo);
+            response.put("data", authResponse);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             logger.error("Error logging in user: {}", e.getMessage());
