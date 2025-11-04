@@ -17,6 +17,7 @@ import { RegisterComponent } from './components/register/register.component';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { WalletLinkBankComponent } from './components/wallet-link-bank/wallet-link-bank.component';
 import { DepositComponent } from './components/deposit/deposit.component';
+import { TransferTokenComponent } from './components/transfer-token/transfer-token.component';
 
 @NgModule({
   declarations: [
@@ -31,7 +32,8 @@ import { DepositComponent } from './components/deposit/deposit.component';
     LoginComponent,
     RegisterComponent,
     DepositComponent,
-    WalletLinkBankComponent
+    WalletLinkBankComponent,
+    TransferTokenComponent
   ],
   providers: [
     {

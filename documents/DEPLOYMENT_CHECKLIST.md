@@ -1,5 +1,51 @@
 # Deployment Checklist - Kind-Ledger
 
+## 🚀 Quick Start NGẮN GỌN (Chạy được trên MỌI máy)
+
+```bash
+# 0) Yêu cầu: Docker 20.10+, Docker Compose V2, Java 17+, Node 16+, Python 3
+
+# 1) Clone repo và vào dự án
+git clone <repository-url> kind-ledger && cd kind-ledger
+
+# 2) HARD RESET sạch mọi thứ trước khi chạy (an toàn cho máy mới hoặc máy đã từng chạy)
+docker compose down -v || true
+docker network rm kindledger_fabric-net || true
+rm -rf blockchain/crypto-config blockchain/artifacts gateway/wallet explorer/wallet \
+       kindchannel.block data mongo postgres redis 2>/dev/null || true
+rm -f .init-completed
+
+# 3) Khởi tạo toàn bộ (tự động crypto, artifacts, ví, compose, channel, chaincode)
+bash setup.sh
+
+# Nếu cần chạy lại từ đầu: rm -f .init-completed && bash setup.sh
+
+# 4) VERIFY nhanh sau setup
+docker ps --format '{{.Names}}\t{{.Status}}' | egrep 'orderer|peer0|gateway|fabric-tools' || true
+docker inspect -f '{{json .NetworkSettings.Networks}}' orderer.kindledger.com | grep -E '"IPAddress"' || true
+docker exec fabric-tools bash -lc 'getent hosts orderer || getent hosts orderer.kindledger.com'
+docker exec fabric-tools bash -lc 'peer channel list'
+docker exec fabric-tools bash -lc 'peer lifecycle chaincode querycommitted -C kindchannel'
+curl -sS http://localhost:8080/api/health
+
+# 5) Nếu DNS/ORDERER lỗi (no such host, 0.0.0.0:7051, v.v.) → QUICK FIX
+docker compose rm -sf orderer || true
+docker network rm kindledger_fabric-net || true
+docker compose up -d && docker restart fabric-tools
+(cd blockchain/scripts && ./create_channel.sh && ./deploy_cvnd_token.sh)
+
+# 6) (Tuỳ chọn) Gọi đọc số dư để xác nhận chaincode hoạt động
+docker exec -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
+  -e CORE_PEER_LOCALMSPID=MBBankMSP \
+  -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp \
+  -e CORE_PEER_ADDRESS=peer0.mb.kindledger.com:7051 \
+  -e CORE_PEER_TLS_ENABLED=true \
+  -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt \
+  fabric-tools bash -lc "peer chaincode query -C kindchannel -n cvnd-token -c '{\"function\":\"BalanceOf\",\"Args\":[\"wallet-mb-003\"]}'"
+```
+
+Lý do máy khác thường lỗi: thứ tự khởi động Docker khác nhau làm `orderer.kindledger.com` chưa có IP khi `fabric-tools` khởi động (DNS chưa resolve được). Khối 5) ở trên xử lý gọn lỗi này trên mọi máy.
+
 ## ✅ Checklist để chạy trên máy mới
 
 ### 1. Yêu cầu hệ thống

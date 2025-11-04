@@ -33,16 +33,25 @@
             Tạo chiến dịch
           </a>
         </li>
+        <li class="nav-item" *ngIf="currentUser && walletActive">
+          <a class="nav-link" routerLink="/transfer" routerLinkActive="active">
+            <i class="fas fa-exchange-alt me-1"></i>
+            Chuyển token
+          </a>
+        </li>
       </ul>
       
       <ul class="navbar-nav">
         <!-- Wallet button -->
-        <li class="nav-item" *ngIf="currentUser">
-          <a class="nav-link btn btn-outline-light me-2" [routerLink]="walletActive ? '/deposit' : '/link-bank'" [class.disabled]="loadingWallet">
+        <li class="nav-item d-flex align-items-center" *ngIf="currentUser">
+          <a class="nav-link btn btn-outline-light me-2" [routerLink]="walletActive ? '/transfer' : '/link-bank'" [class.disabled]="loadingWallet">
             <i class="fas fa-wallet me-1"></i>
             Ví: <span class="fw-bold">{{ walletBalance | number:'1.0-0' }} VND</span>
-            <span *ngIf="walletActive" class="badge bg-success text-white ms-2">Nạp tiền</span>
             <span *ngIf="!walletActive" class="badge bg-warning text-dark ms-2">Chờ liên kết</span>
+          </a>
+          <a *ngIf="walletActive" class="btn btn-success btn-sm" routerLink="/deposit">
+            <i class="fas fa-plus me-1"></i>
+            Nạp tiền
           </a>
         </li>
         <li class="nav-item" *ngIf="currentUser">

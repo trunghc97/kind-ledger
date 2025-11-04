@@ -810,6 +810,46 @@ def test_explorer_recent_blocks():
         return make_explorer_request("GET", "/blocks")
     return test_api("Explorer Recent Blocks", func)
 
+def test_transfer_between_wallets(from_wallet: str = "0xMB001", to_wallet: str = "0xMB002", amount: float = 100.25):
+    """E2E: Check both wallets active, call /v1/transfer, then verify trace committed."""
+
+    def func():
+        # 1) Check wallets active (assumes /v1/wallet/{addr} returns { active, balance })
+        def check_active(w: str) -> None:
+            r = make_request("GET", f"/v1/wallet/{w}")
+            if r.get("status_code") != 200 or not r.get("json") or not r["json"].get("active"):
+                raise RuntimeError(f"Wallet {w} inactive or not found")
+
+        try:
+            check_active(from_wallet)
+            check_active(to_wallet)
+        except Exception as e:
+            return {"status_code": 400, "error": str(e)}
+
+        # 2) Call transfer
+        payload = {"fromWallet": from_wallet, "toWallet": to_wallet, "amount": amount}
+        transfer_res = make_request("POST", "/v1/transfer", payload)
+        if transfer_res.get("status_code") != 200:
+            return transfer_res
+
+        j = transfer_res.get("json", {})
+        tx_id = j.get("txId")
+        if not tx_id:
+            return {"status_code": 400, "error": "Missing txId in response"}
+
+        # 3) Verify on blockchain via trace endpoint
+        time.sleep(2)
+        trace_res = make_request("GET", f"/v1/token/trace/{tx_id}")
+        if trace_res.get("status_code") != 200:
+            return trace_res
+        trace = trace_res.get("json", {})
+        if trace.get("blockchainStatus") != "COMMITTED":
+            return {"status_code": 400, "error": "Blockchain commit not verified"}
+
+        # Normalize success
+        return {"status_code": 200, "json": {"txId": tx_id, "trace": trace}}
+
+    return test_api("Transfer Between Wallets", func)
 def main():
     """Main function"""
     print_header("Kind-Ledger Gateway API Test Suite")
@@ -864,6 +904,12 @@ def main():
         test_authentication_scenarios()
     except Exception as e:
         print_error(f"\nError in authentication tests: {str(e)}")
+
+    # Run transfer E2E test (requires two active wallets in backend data)
+    try:
+        test_transfer_between_wallets()
+    except Exception as e:
+        print_error(f"\nError in transfer test: {str(e)}")
     
     # Print summary
     print_summary()

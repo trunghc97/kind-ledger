@@ -1,0 +1,21 @@
+<div class="transfer-card">
+  <h2>🔁 Transfer Token</h2>
+
+  <form [formGroup]="form" (ngSubmit)="transfer()" class="form-grid">
+    <input formControlName="fromWallet" placeholder="From Wallet Address">
+    <input formControlName="toWallet" placeholder="To Wallet Address">
+    <input formControlName="amount" type="number" placeholder="Amount">
+    <button [disabled]="loading" type="submit">{{ loading ? 'Processing...' : 'Transfer' }}</button>
+  </form>
+
+  <div *ngIf="message" class="message">{{ message }}</div>
+
+  <div *ngIf="result" class="result">
+    <p>TxId: {{ result.txId }}</p>
+    <p *ngIf="result.blockHash">BlockHash: {{ result.blockHash }}</p>
+    <div *ngIf="explorerUrl">
+      <a [href]="explorerUrl" target="_blank">🔗 View on Blockchain Explorer</a>
+    </div>
+    <p *ngIf="blockStatus">Blockchain status: {{ blockStatus }}</p>
+  </div>
+</div>

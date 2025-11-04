@@ -61,8 +61,9 @@ export class GatewayService {
     return this.http.post(`${this.apiV1}/link-bank`, { accountNumber });
   }
 
-  transfer(fromWalletAddress: string, toWalletAddress: string, amount: number): Observable<any> {
-    return this.http.post(`${this.apiV1}/transfer`, { fromWalletAddress, toWalletAddress, amount });
+  transfer(fromWallet: string, toWallet: string, amount: number): Observable<any> {
+    // Backend expects fromWallet, toWallet, amount
+    return this.http.post(`${this.apiV1}/transfer`, { fromWallet, toWallet, amount });
   }
 
   getWalletBalance(walletAddress: string): Observable<WalletBalance> {
