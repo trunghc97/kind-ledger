@@ -60,12 +60,15 @@
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "browserTarget": "kindledger-frontend:build"
+          },
           "configurations": {
             "production": {
-              "buildTarget": "kindledger-frontend:build:production"
+              "browserTarget": "kindledger-frontend:build:production"
             },
             "development": {
-              "buildTarget": "kindledger-frontend:build:development"
+              "browserTarget": "kindledger-frontend:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -95,5 +98,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": "e5dea46c-6de8-4aa1-b6a3-4ceca1b3b4e4"
   }
 }
