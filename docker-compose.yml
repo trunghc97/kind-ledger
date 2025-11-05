@@ -368,25 +368,25 @@ services:
       - fabric-net
 
   # Angular Frontend
-  frontend:
-    build: 
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: kindledger-frontend
-    restart: unless-stopped
-    ports:
-      - "4200:4200"
-    volumes:
-      - ./data/node_modules:/app/node_modules
-    depends_on:
-      - gateway
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4200"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - fabric-net
+  # frontend:
+  #   build: 
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: kindledger-frontend
+  #   restart: unless-stopped
+  #   ports:
+  #     - "4200:4200"
+  #   volumes:
+  #     - ./data/node_modules:/app/node_modules
+  #   depends_on:
+  #     - gateway
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4200"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #   networks:
+  #     - fabric-net
 
   # Node.js Explorer
   explorer:

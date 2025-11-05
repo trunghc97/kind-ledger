@@ -76,6 +76,7 @@ Kind-Ledger là một Proof of Concept (POC) cho hệ thống quyên góp từ t
 - **Python 3.x** để chạy test scripts
 - **Java 17+** (cho Gateway)
 - **Node.js 16+** (cho Explorer)
+- **Node.js 18+** (cho Frontend khi chạy local realtime)
 
 ### Bước 1: Clone repository
 
@@ -97,14 +98,33 @@ cd blockchain/scripts
 ./deploy_cvnd_token.sh
 ```
 
-**Hoặc khởi động thủ công:**
+**Hoặc khởi động thủ công (không bao gồm Frontend trong docker-compose):**
 ```bash
-# Khởi động tất cả services
+# Khởi động các services backend (Gateway, Explorer, Fabric, DB, Redis)
 docker-compose up -d
 
 # Kiểm tra trạng thái containers
 docker-compose ps
 ```
+
+### Bước 3: Chạy Frontend cục bộ (realtime build, tránh cache Docker)
+
+```bash
+# 1) Cài dependencies
+cd frontend
+npm install
+
+# 2) Chạy dev server với proxy tới Gateway
+# (proxy đã cấu hình trong proxy.conf.json => forward /api sang http://localhost:8080)
+npm run start
+# hoặc: npx ng serve --proxy-config proxy.conf.json --port 4200 --host 0.0.0.0
+
+# Frontend sẽ sẵn sàng tại: http://localhost:4200
+```
+
+> Ghi chú:
+> - Frontend đã được loại khỏi docker-compose để hỗ trợ build realtime nhanh hơn, tránh cache layer.
+> - Gateway vẫn chạy trong Docker ở `http://localhost:8080`; proxy của Angular sẽ chuyển tiếp API.
 
 > 💡 **Lưu ý:** Xem [Deployment Checklist](./documents/DEPLOYMENT_CHECKLIST.md) để biết chi tiết đầy đủ về quy trình setup, các file cấu hình đã được cập nhật, và troubleshooting.
 
@@ -125,7 +145,7 @@ bash test-api.sh
 
 | Dịch vụ | URL | Mô tả |
 |---------|-----|-------|
-| **Frontend** | http://localhost:4200 | Giao diện người dùng |
+| **Frontend (local)** | http://localhost:4200 | Giao diện người dùng (chạy cục bộ, realtime build) |
 | **API Gateway** | http://localhost:8080/api | REST API |
 | **Block Explorer** | http://localhost:3000 | Blockchain Explorer |
 | **Health Check** | http://localhost:8080/api/health | Trạng thái hệ thống |
@@ -148,7 +168,7 @@ kind-ledger/
 ├── frontend/                         # 🎨 Angular Frontend
 ├── explorer/                         # 🔍 Node.js Explorer
 ├── database/                         # 🗄️ Database setup
-├── docker-compose.yml                # 🐳 Docker orchestration
+├── docker-compose.yml                # 🐳 Docker orchestration (không bao gồm Frontend)
 ├── setup.sh                          # 🚀 Script khởi tạo tự động
 ├── test_gateway_api.py               # 🧪 API test script
 ├── test-api.sh                       # 🧪 Test wrapper
@@ -350,7 +370,6 @@ curl http://localhost:3000/api/health
 
 # Kiểm tra logs
 docker-compose logs -f gateway
-docker-compose logs -f frontend
 docker-compose logs -f explorer
 ```
 

@@ -35,29 +35,32 @@ cd /opt/gopath/src/github.com/hyperledger/fabric/peer;
 echo "== go mod tidy & vendor";
 cd blockchain/chaincode/cvnd-token && go mod tidy && go mod vendor && cd - >/dev/null;
 echo "== package";
-rm -f cvnd-token_1.tar.gz;
-peer lifecycle chaincode package cvnd-token_1.tar.gz --path blockchain/chaincode/cvnd-token --lang golang --label cvnd-token_1;
+SEQ=${SEQ:-1}
+LABEL=cvnd-token_${SEQ}
+PKG_FILE=${LABEL}.tar.gz
+rm -f ${PKG_FILE};
+peer lifecycle chaincode package ${PKG_FILE} --path blockchain/chaincode/cvnd-token --lang golang --label ${LABEL};
 
 echo "== install on all peers";
 # Install on MBBank
 setPeerEnv MBBankMSP /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp peer0.mb.kindledger.com:7051 "$MB_PEER_TLS_CA";
-peer lifecycle chaincode install cvnd-token_1.tar.gz || true;
+peer lifecycle chaincode install ${PKG_FILE} || true;
 
 # Install on Charity
 setPeerEnv CharityMSP /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/charity.kindledger.com/users/Admin@charity.kindledger.com/msp peer0.charity.kindledger.com:7051 "$CH_PEER_TLS_CA";
-peer lifecycle chaincode install cvnd-token_1.tar.gz || true;
+peer lifecycle chaincode install ${PKG_FILE} || true;
 
 # Install on Supplier
 setPeerEnv SupplierMSP /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/supplier.kindledger.com/users/Admin@supplier.kindledger.com/msp peer0.supplier.kindledger.com:7051 "$SP_PEER_TLS_CA";
-peer lifecycle chaincode install cvnd-token_1.tar.gz || true;
+peer lifecycle chaincode install ${PKG_FILE} || true;
 
 # Install on Auditor
 setPeerEnv AuditorMSP /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/auditor.kindledger.com/users/Admin@auditor.kindledger.com/msp peer0.auditor.kindledger.com:7051 "$AU_PEER_TLS_CA";
-peer lifecycle chaincode install cvnd-token_1.tar.gz || true;
+peer lifecycle chaincode install ${PKG_FILE} || true;
 
 echo "== queryinstalled (using MBBank to get PKG_ID)";
 setPeerEnv MBBankMSP /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp peer0.mb.kindledger.com:7051 "$MB_PEER_TLS_CA";
-PKG_ID=$(peer lifecycle chaincode queryinstalled | sed -n "s/Package ID: \(.*\), Label: cvnd-token_1/\1/p" | head -1);
+PKG_ID=$(peer lifecycle chaincode queryinstalled | sed -n "s/Package ID: \(.*\), Label: ${LABEL}/\1/p" | head -1);
 echo "PKG_ID=$PKG_ID";
 
 # Approve for all orgs
@@ -74,7 +77,7 @@ for ORG in MBBankMSP CharityMSP SupplierMSP AuditorMSP; do
       setPeerEnv AuditorMSP /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/auditor.kindledger.com/users/Admin@auditor.kindledger.com/msp peer0.auditor.kindledger.com:7051 "$AU_PEER_TLS_CA";;
   esac
   peer lifecycle chaincode approveformyorg \
-    --channelID kindchannel --name cvnd-token --version 1 --sequence 1 \
+    --channelID kindchannel --name cvnd-token --version 1 --sequence ${SEQ} \
     --package-id ${PKG_ID} \
     --tls --cafile "$ORDERER_TLS_CA" \
     --orderer orderer:7050 \
@@ -82,16 +85,16 @@ for ORG in MBBankMSP CharityMSP SupplierMSP AuditorMSP; do
   sleep 1;
 done
 
-echo "== checkcommitreadiness";
+echo "== checkcommitreadiness (sequence=${SEQ})";
 peer lifecycle chaincode checkcommitreadiness \
-  --channelID kindchannel --name cvnd-token --version 1 --sequence 1 \
+  --channelID kindchannel --name cvnd-token --version 1 --sequence ${SEQ} \
   --output json || true;
 
-echo "== commit";
+echo "== commit (sequence=${SEQ})";
 # Use multiple peer addresses for commit
 setPeerEnv MBBankMSP /opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp peer0.mb.kindledger.com:7051 "$MB_PEER_TLS_CA";
 peer lifecycle chaincode commit \
-  --channelID kindchannel --name cvnd-token --version 1 --sequence 1 \
+  --channelID kindchannel --name cvnd-token --version 1 --sequence ${SEQ} \
   --tls --cafile "$ORDERER_TLS_CA" \
   --orderer orderer:7050 \
   --ordererTLSHostnameOverride orderer.orderer.kindledger.com \

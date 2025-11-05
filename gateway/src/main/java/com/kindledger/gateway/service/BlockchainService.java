@@ -14,14 +14,15 @@ import java.time.LocalDateTime;
 @Slf4j
 public class BlockchainService {
 
-    @Value("${fabric.channel.name:kindchannel}")
+    @Value("${fabric.channelName:kindchannel}")
     private String channelName;
 
-    // Theo yêu cầu: chaincode = cvnd-token, function = mint
-    @Value("${fabric.chaincode.name:cvnd-token}")
+    // Tên chaincode được cấu hình trong application.yml (fabric.chaincodeName)
+    @Value("${fabric.chaincodeName:kindledgercc}")
     private String chaincodeName;
 
-    @Value("${FABRIC_NETWORKCONFIGPATH:/opt/gopath/src/github.com/hyperledger/fabric/peer/config/connection-profile.yaml}")
+    // Đọc từ property trước; fallback sang biến môi trường nếu không có
+    @Value("${fabric.networkConfigPath:${FABRIC_NETWORKCONFIGPATH:/opt/gopath/src/github.com/hyperledger/fabric/peer/config/connection-profile.yaml}}")
     private String networkConfigPathEnv;
 
     @Value("${FABRIC_USER:Admin@mb.kindledger.com}")
@@ -29,6 +30,8 @@ public class BlockchainService {
 
     public BlockchainMintResult mintToken(String walletAddress, BigDecimal amount, String tokenHash) {
         try {
+            log.info("[FABRIC] Mint prepare | channel={} | chaincode={} | user={} | config={} | walletAddress={} | amount={}",
+                    channelName, chaincodeName, fabricUser, networkConfigPathEnv, walletAddress, amount);
             Path networkConfigPath = Paths.get(networkConfigPathEnv);
             Path walletPath = Paths.get("/opt/gopath/src/github.com/hyperledger/fabric/peer/wallet");
             Wallet wallet = Wallets.newFileSystemWallet(walletPath);
@@ -60,6 +63,8 @@ public class BlockchainService {
                 return new BlockchainMintResult(txId, blockHash, LocalDateTime.now());
             }
         } catch (Exception e) {
+            log.error("[FABRIC] Mint failed | channel={} | chaincode={} | user={} | config={} | err={}",
+                    channelName, chaincodeName, fabricUser, networkConfigPathEnv, e.toString(), e);
             log.warn("[FABRIC-FALLBACK] Mint fallback do lỗi: {}. Trả về kết quả giả lập và tiếp tục lưu giao dịch.", e.getMessage());
             String txId = "FALLBACK-" + java.util.UUID.randomUUID();
             String blockHash = null;
@@ -71,6 +76,8 @@ public class BlockchainService {
 
     public BlockchainTxResult transferToken(String fromWallet, String toWallet, BigDecimal amount) {
         try {
+            log.info("[FABRIC] Transfer prepare | channel={} | chaincode={} | user={} | config={} | from={} | to={} | amount={}",
+                    channelName, chaincodeName, fabricUser, networkConfigPathEnv, fromWallet, toWallet, amount);
             Path networkConfigPath = Paths.get(networkConfigPathEnv);
             Path walletPath = Paths.get("/opt/gopath/src/github.com/hyperledger/fabric/peer/wallet");
             Wallet wallet = Wallets.newFileSystemWallet(walletPath);
@@ -93,6 +100,8 @@ public class BlockchainService {
                 return new BlockchainTxResult(txId, blockHash, LocalDateTime.now());
             }
         } catch (Exception e) {
+            log.error("[FABRIC] Transfer failed | channel={} | chaincode={} | user={} | config={} | from={} | to={} | amount={} | err={}",
+                    channelName, chaincodeName, fabricUser, networkConfigPathEnv, fromWallet, toWallet, amount, e.toString(), e);
             log.warn("[FABRIC-FALLBACK] Transfer fallback: {}", e.getMessage());
             String txId = "FALLBACK-" + java.util.UUID.randomUUID();
             return new BlockchainTxResult(txId, null, LocalDateTime.now());
@@ -101,6 +110,8 @@ public class BlockchainService {
 
     public BlockchainTxResult burnToken(String walletAddress, BigDecimal amount) {
         try {
+            log.info("[FABRIC] Burn prepare | channel={} | chaincode={} | user={} | config={} | walletAddress={} | amount={}",
+                    channelName, chaincodeName, fabricUser, networkConfigPathEnv, walletAddress, amount);
             Path networkConfigPath = Paths.get(networkConfigPathEnv);
             Path walletPath = Paths.get("/opt/gopath/src/github.com/hyperledger/fabric/peer/wallet");
             Wallet wallet = Wallets.newFileSystemWallet(walletPath);
@@ -123,6 +134,8 @@ public class BlockchainService {
                 return new BlockchainTxResult(txId, blockHash, LocalDateTime.now());
             }
         } catch (Exception e) {
+            log.error("[FABRIC] Burn failed | channel={} | chaincode={} | user={} | config={} | walletAddress={} | amount={} | err={}",
+                    channelName, chaincodeName, fabricUser, networkConfigPathEnv, walletAddress, amount, e.toString(), e);
             log.warn("[FABRIC-FALLBACK] Burn fallback: {}", e.getMessage());
             String txId = "FALLBACK-" + java.util.UUID.randomUUID();
             return new BlockchainTxResult(txId, null, LocalDateTime.now());

@@ -2,7 +2,6 @@
   <h2>🔁 Transfer Token</h2>
 
   <form [formGroup]="form" (ngSubmit)="transfer()" class="form-grid">
-    <input formControlName="fromWallet" placeholder="From Wallet Address">
     <input formControlName="toWallet" placeholder="To Wallet Address">
     <input formControlName="amount" type="number" placeholder="Amount">
     <button [disabled]="loading" type="submit">{{ loading ? 'Processing...' : 'Transfer' }}</button>

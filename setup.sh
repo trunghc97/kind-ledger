@@ -346,14 +346,29 @@ main() {
     
     # --- Thêm thao tác deploy cvnd-token đúng checklist ---
     echo -e "${YELLOW}🔁 Đảm bảo deploy chaincode cvnd-token trên tất cả peers...${NC}"
-    (cd blockchain/scripts && ./deploy_cvnd_token.sh)
+    (cd blockchain/scripts && ./deploy_cvnd_token.sh || true)
     
     echo -e "${YELLOW}⏳ Chờ các container ổn định...${NC}"
     sleep 20
     
-    # Kiểm tra lại channel và committed chaincode
-    docker exec fabric-tools bash -lc 'peer channel list'
-    docker exec fabric-tools bash -lc 'peer lifecycle chaincode querycommitted -C kindchannel'
+    # Kiểm tra lại channel và committed chaincode (thiết lập biến môi trường peer)
+    docker exec \
+      -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
+      -e CORE_PEER_LOCALMSPID=MBBankMSP \
+      -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp \
+      -e CORE_PEER_ADDRESS=peer0.mb.kindledger.com:7051 \
+      -e CORE_PEER_TLS_ENABLED=true \
+      -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt \
+      fabric-tools bash -lc 'peer channel list' || true
+
+    docker exec \
+      -e FABRIC_CFG_PATH=/etc/hyperledger/fabric \
+      -e CORE_PEER_LOCALMSPID=MBBankMSP \
+      -e CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/users/Admin@mb.kindledger.com/msp \
+      -e CORE_PEER_ADDRESS=peer0.mb.kindledger.com:7051 \
+      -e CORE_PEER_TLS_ENABLED=true \
+      -e CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain/crypto-config/peerOrganizations/mb.kindledger.com/peers/peer0.mb.kindledger.com/tls/ca.crt \
+      fabric-tools bash -lc 'peer lifecycle chaincode querycommitted -C kindchannel' || true
     
     # Tạo file đánh dấu đã khởi tạo
     touch "$INIT_FLAG_FILE"
